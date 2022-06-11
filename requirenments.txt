@@ -1,0 +1,7 @@
+selenium==4.2.0
+MoviePy==1.0.3
+asyncpraw==7.5.0
+python-dotenv==0.20.0
+aiohttp==3.8.1
+webdriver-manager==3.7.0
+
