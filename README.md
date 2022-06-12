@@ -2,8 +2,18 @@
 
 ### Functions
 
-* Screenshots of comment/other stuff - selenium & pymovie
-* TTS (google tts or tiktok tts) - gtts/'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/?text_speaker='
-* Customizable voices - https://github.com/The-Drobe/RedditVideoMakerBot/blob/master/examples/ValidOptionsTTS.txt
+* Video creation from scraps - moviepy 
+* TTS  - google tts or tiktok tts ✅
+* Profane filter ✅
+* NSFW filter ✅
+* Customizable voices ✅
+* Customizable background video - minecraft/stuff ✅
 * Customizable background music 
-* Customizable background video (minecraft/stuff)
+
+1. Reddit
+   * Screenshots of comment/other stuff - selenium ✅
+   * Screenshots dark theme ✅
+   * Custom & random subreddit ✅
+
+2. Tumblr
+    * WIP

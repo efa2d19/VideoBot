@@ -21,9 +21,23 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
     else:
         subreddit = await reddit.subreddit(subreddit)
 
-    submission = random.choice([i async for i in subreddit.hot(limit=10)])
-    await submission.load()
+    async def get_submission():
+        results = random.choice([i async for i in subreddit.hot(limit=50)])
+        return await results.load()
 
+    allow_nsfw = bool(getenv('allow_nsfw', True))
+    is_nsfw = False
+    while True:
+        submission = await get_submission()
+        if not allow_nsfw:
+            if 'nsfw' in submission.whitelist_status:
+                continue
+        else:
+            is_nsfw = 'nsfw' in submission.whitelist_status
+            break
     # submission.comment_sort = "new"
-    top_level_comments = list(submission.comments)
-    return submission.title, top_level_comments
+    print(submission.whitelist_status)
+
+    number_of_comments = int(getenv('number_of_comments', 10))
+    top_level_comments = list(submission.comments)[:number_of_comments]
+    return submission.title, top_level_comments, is_nsfw
