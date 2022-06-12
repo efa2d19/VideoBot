@@ -1,6 +1,6 @@
 from pytube import YouTube
 from os import getenv
-import requests
+# import requests
 
 
 def background_video(

@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
-from selenium.common.exceptions import TimeoutException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
 
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.options import Options
@@ -28,14 +28,17 @@ class Driver:
 
 class Wait:
     _method: str = By.XPATH
-    _timeout: int = 5
-    _driver = Driver().driver
+    _timeout: int = 15
+    _driver: webdriver = Driver().driver
 
     def find_element(self, el: str,) -> 'webdriver':
         return WebDriverWait(self._driver, self._timeout).until(ec.presence_of_element_located((self._method, el)))
 
-    def find_element_clickable(self, el: str,) -> 'webdriver':
-        return WebDriverWait(self._driver, self._timeout).until(ec.element_to_be_clickable((self._method, el)))
+    def click(self, el: str,) -> None:
+        try:
+            self.find_element(el).click()
+        except ElementNotInteractableException:
+            WebDriverWait(self._driver, self._timeout).until(ec.element_to_be_clickable((self._method, el))).click()
 
 
 class RedditScreenshot(Wait):
@@ -47,22 +50,22 @@ class RedditScreenshot(Wait):
                  filename: str,
                  is_nsfw: bool = False,
                  ) -> None:
-        if bool(getenv('dark_theme', True)) and not self.__dark_mode_enabled:
+        if getenv('dark_theme', 'True') == 'True' and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
             self._driver.get('https://reddit.com/')
-            self.find_element('//*[contains(@class, \'header-user-dropdown\')]').click()
+            self.click('//*[contains(@class, \'header-user-dropdown\')]')
             try:
-                self.find_element_clickable('//*[contains(text(), \'Settings\')]').click()
+                self.click('//*[contains(text(), \'Settings\')]/ancestor::button[1]')
             except TimeoutException:
                 pass  # Sometimes there's no Settings (lol idk)
-            self.find_element('//*[contains(text(), \'Dark Mode\')]').click()
+            self.click('//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]')
 
         self._driver.get(link)
 
         if is_nsfw:
             try:  # Closes nsfw warning if there is one
-                self.find_element('//*[contains(text(), \'Yes\')]').click()
+                self.click('//*[contains(text(), \'Yes\')]')
             except TimeoutException:
                 pass
 
-        self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(filename)
+        element = self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(filename)

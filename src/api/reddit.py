@@ -27,7 +27,7 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
         await results.load()
         return results
 
-    allow_nsfw = bool(getenv('allow_nsfw', True))
+    allow_nsfw = getenv('allow_nsfw', 'True') == 'True'
     is_nsfw = False
     while True:
         submission = await get_submission()

@@ -10,7 +10,7 @@ def profane_filter(
 ) -> str:
     word_list.sort(reverse=True, key=len)
     filtered_text = text
-    if bool(getenv("PROFANE_FILTER", False)) and any([word in word_list for word in text.split()]):
+    if getenv("PROFANE_FILTER", 'False') == 'True' and any([word in word_list for word in text.split()]):
         for word in word_list:
             if word in text:
                 word_lenght = word.__len__()
