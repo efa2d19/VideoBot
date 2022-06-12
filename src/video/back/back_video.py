@@ -1,22 +1,14 @@
-from pytube import YouTube
 from os import getenv
-# import requests
+
+from src.api.youtube import youtube_get_file
 
 
 def background_video(
-        title: str
+        file_title: str,
+        min_lenght: int,
 ) -> None:
     link = getenv('youtube_background_video', False)
-    if link:
-        YouTube(link).streams.first().download(title)
-    else:
-        # results = requests.get(
-        #     'https://www.youtube.com/results',
-        #     params={
-        #         'search_query': 'minecraft parkour gameplay',
-        #     }).json()
-
-        from src.video.back.default import default_list
-        from random import choice
-        link = choice(default_list)
-        YouTube(link).streams.first().download(title)
+    background_video_query = getenv('background_video_query', None)
+    if not background_video_query:
+        background_video_query = 'Relaxing Minecraft Parkour'
+    youtube_get_file(file_title, min_lenght, link, background_video_query, 'mp4')
