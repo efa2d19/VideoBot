@@ -14,26 +14,32 @@ from os import getenv
 class Driver:
     _window_size = "1920,1080"
     _chrome_options = Options()
-    _chrome_options.add_argument("--headless")
-    _chrome_options.add_argument("–-disable-notifications")
+    _chrome_options.add_argument("--headless")  # Open in background
+    _chrome_options.add_argument("start-maximized")
     _chrome_options.add_argument("--window-size=%s" % _window_size)
+    _chrome_options.add_argument("–-disable-notifications")
+    _chrome_options.add_argument("--disable-extensions")
+    _chrome_options.add_experimental_option("prefs", {
+        "profile.default_content_setting_values.notifications": 2
+    })  # 2 - blocks all notifications, 1 - allows
+
     driver = webdriver.Chrome(ChromeDriverManager().install(), chrome_options=_chrome_options)
 
 
-class Screenshot:
+class Wait:
     _method: str = By.XPATH
     _timeout: int = 5
-    __driver = Driver().driver
-    __dark_mode_enabled: bool = False
+    _driver = Driver().driver
 
-    def find_element(
-            self,
-            el: str,
-    ):
-        try:
-            return WebDriverWait(self.__driver, self._timeout).until(ec.presence_of_element_located((self._method, el)))
-        except TimeoutException:
-            raise ValueError('Cant find_element comment on the page')
+    def find_element(self, el: str,) -> 'webdriver':
+        return WebDriverWait(self._driver, self._timeout).until(ec.presence_of_element_located((self._method, el)))
+
+    def find_element_clickable(self, el: str,) -> 'webdriver':
+        return WebDriverWait(self._driver, self._timeout).until(ec.element_to_be_clickable((self._method, el)))
+
+
+class RedditScreenshot(Wait):
+    __dark_mode_enabled: bool = False
 
     def __call__(self,
                  link: str,
@@ -41,16 +47,17 @@ class Screenshot:
                  filename: str,
                  is_nsfw: bool = False,
                  ) -> None:
-        self.__driver.get(link)
-
-        if bool(getenv('dark_theme', False)) and self.__dark_mode_enabled:
+        if bool(getenv('dark_theme', True)) and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
+            self._driver.get('https://reddit.com/')
             self.find_element('//*[contains(@class, \'header-user-dropdown\')]').click()
             try:
-                self.find_element('//*[contains(text(), \'Settings\')]').click()
+                self.find_element_clickable('//*[contains(text(), \'Settings\')]').click()
             except TimeoutException:
                 pass  # Sometimes there's no Settings (lol idk)
             self.find_element('//*[contains(text(), \'Dark Mode\')]').click()
+
+        self._driver.get(link)
 
         if is_nsfw:
             try:  # Closes nsfw warning if there is one

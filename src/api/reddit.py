@@ -1,7 +1,8 @@
-from os import getenv
-import random
-import asyncpraw
 from aiohttp import ClientSession
+import asyncpraw
+
+import random
+from os import getenv
 
 
 async def reddit_setup(client: 'ClientSession') -> tuple:
@@ -23,7 +24,8 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
 
     async def get_submission():
         results = random.choice([i async for i in subreddit.hot(limit=50)])
-        return await results.load()
+        await results.load()
+        return results
 
     allow_nsfw = bool(getenv('allow_nsfw', True))
     is_nsfw = False
@@ -36,7 +38,6 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
             is_nsfw = 'nsfw' in submission.whitelist_status
             break
     # submission.comment_sort = "new"
-    print(submission.whitelist_status)
 
     number_of_comments = int(getenv('number_of_comments', 10))
     top_level_comments = list(submission.comments)[:number_of_comments]

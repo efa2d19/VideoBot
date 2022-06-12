@@ -10,11 +10,11 @@ def background_video(
     if link:
         YouTube(link).streams.first().download(title)
     else:
-        results = requests.get(
-            'https://www.youtube.com/results',
-            params={
-                'search_query': 'minecraft parkour gameplay',
-            }).json()
+        # results = requests.get(
+        #     'https://www.youtube.com/results',
+        #     params={
+        #         'search_query': 'minecraft parkour gameplay',
+        #     }).json()
 
         from src.video.back.default import default_list
         from random import choice
