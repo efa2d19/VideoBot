@@ -1,3 +1,5 @@
+import asyncio
+
 from aiohttp import ClientSession
 
 from src.api.reddit import reddit_setup
@@ -17,82 +19,84 @@ from subprocess import Popen
 
 W, H = 1080, 1920
 
-opacity = 0.9
+opacity = 0.9  # TODO move to envs
 
 
 async def main():
     print('started')
     async with ClientSession() as client:
-        submission_title, comments, is_nsfw = await reddit_setup(client)
-        await tts(client, submission_title, 'title.mp3')
+        submission, comments, is_nsfw = await reddit_setup(client)
+        async_tasks = [tts(client, submission.title, 'title')]
         screenshot = RedditScreenshot()
-        tts_list = list()
-        screenshot_list = list()
+        screenshot(f'https://www.reddit.com{submission.permalink}', '', 'title', is_nsfw)
+        # TODO fix (screen of comment)
         for index, comment in enumerate(comments):
-            await tts(client, comment.body, f'{index}.mp3')
-            tts_list.append(f'{index}_body.mp3')
-            screenshot(f'https://www.reddit.com{comment.permalink}', comment.id, f'{index}.png', is_nsfw)
-            screenshot_list.append(f'{index}_photo.png')
+            async_tasks.append(tts(client, comment.body, index))
+            screenshot(f'https://www.reddit.com{comment.permalink}', comment.id, index, is_nsfw)
+        await asyncio.gather(*async_tasks)
     print('collected')
 
-    background_audio()
-    background_video()
-
+    duration = 0
     audio_clip_list = list()
-    audio_title = AudioFileClip('assets/audio/title.mp3')
-    duration = audio_title.duration
-    audio_clip_list.append(
-        (
-            audio_title
-            .set_duration(duration + 2)
-            .set_start(1)
-            .set_end(duration + 2)
-        )
-    )
-    for audio in tts_list:
-        audio_clip = AudioFileClip(audio)
-        clip_duration = audio_clip.duration
-        audio_clip = (
-            audio_clip
-            .set_duration(clip_duration + 2)
-            .set_start(duration + 1)
-            .set_end(duration + clip_duration + 2)
-        )
+
+    audio_title = AudioFileClip('assets/audio/title.mp3').set_start(1)
+    duration += audio_title.duration
+
+    audio_clip_list.append(audio_title)
+
+    for audio in range(comments.__len__()):
+        audio_clip = AudioFileClip(f'assets/audio/{audio}.mp3').set_start(duration + 2)
         audio_clip_list.append(audio_clip)
-        duration += clip_duration
-    back_audio = (
-            AudioFileClip('assets/audio/back.mp3')
-            .set_start(0)
-            .set_end(duration)
-            .fx(afx.audio_normalize)  # TODO Check if works
-            .volumex(0.2)  # TODO Check if works
+        duration += audio_clip.duration
+
+    if getenv('enable_background_audio', 'True') == 'True':
+        back_audio = (
+                AudioFileClip(await background_audio(duration))
+                .set_duration(duration)
+                .set_start(0)
+                .volumex(0.2)  # TODO Check if works
+            )
+
+        audio_clip_list.insert(
+            0,
+            afx.audio_normalize(back_audio)
+            # back_audio.fx(afx.audio_loop())  # TODO Check if works
         )
 
-    audio_clip_list.insert(
-        0,
-        afx.audio_loop(back_audio)  # TODO Check if works
-    )
-
-    audio = CompositeAudioClip(audio_clip_list)
+    final_audio = CompositeAudioClip(audio_clip_list)
 
     photo_clip_list = list()
-    for index, photo in enumerate(screenshot_list):
-        index_offset = 1
 
-        if getenv('enable_background_audio', 'True') == 'True':
-            index_offset += 1
+    index_offset = 1
+
+    if getenv('enable_background_audio', 'True') == 'True':
+        index_offset += 1
+
+    photo_title = ImageClip('assets/img/title.png')
+    photo_clip_list.append(
+        (
+            photo_title
+            .set_start(audio_clip_list[index_offset].start - 0.5)
+            .set_end(audio_clip_list[index_offset].end + 0.5)
+            .set_duration(audio_clip_list[index_offset].duration + 1)
+            .set_position('center')
+            .resize(width=W - 100)
+            .set_opacity(float(opacity)))
+        )
+
+    for photo in range(comments.__len__()):
         photo_clip = (
-            ImageClip(photo)
-            .set_duration(audio_clip_list[index + index_offset].duration + 1)
-            .set_start(audio_clip_list[index + index_offset].start - 0.5)
-            .set_end(audio_clip_list[index + index_offset].end + 0.5)
+            ImageClip(f'assets/img/{photo}.png')
+            .set_start(audio_clip_list[photo + index_offset].start - 0.5)
+            .set_end(audio_clip_list[photo + index_offset].end + 0.5)
+            .set_duration(audio_clip_list[photo + index_offset].duration + 1)
             .set_position('center')
             .resize(width=W - 100)
             .set_opacity(float(opacity)))
         photo_clip_list.append(photo_clip)
 
     back_video = (
-        VideoFileClip('assets/video/back.mp4')
+        VideoFileClip(await background_video(duration))
         .without_audio()
         .set_start(0)
         .set_end(duration)
@@ -105,8 +109,8 @@ async def main():
         back_video
     )
 
-    final_video = CompositeVideoClip(photo_clip_list)
-    final_video.audio = audio
+    final_video = CompositeVideoClip(photo_clip_list)  # Merge all videos in one
+    final_video.audio = final_audio  # Add audio clips to final video
 
     print('writing')
 
@@ -118,4 +122,4 @@ async def main():
     )
 
     # Clean up
-    Popen(['rm', '-rf' 'assets/*/*'])
+    Popen(['rm', '-rf' 'assets/*/*'])  # TODO doesnt work(

@@ -8,7 +8,7 @@
 * NSFW filter ✅
 * Customizable voices ✅
 * Customizable background video - minecraft/stuff ✅
-* Customizable background music ✅
+* Customizable background music
 
 1. Reddit
    * Screenshots of comment/other stuff - selenium ✅

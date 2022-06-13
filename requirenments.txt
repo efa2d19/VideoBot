@@ -1,7 +1,8 @@
-selenium==4.2.0
-MoviePy==1.0.3
-asyncpraw==7.5.0
 python-dotenv==0.20.0
+asyncpraw==7.5.0
 aiohttp==3.8.1
-webdriver-manager==3.7.0
+selenium==4.2.0
+arsenic==21.8
+MoviePy==1.0.3
 pytube==12.1.0
+youtube-search-python==1.6.5

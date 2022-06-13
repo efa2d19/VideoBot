@@ -41,4 +41,4 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
 
     number_of_comments = int(getenv('number_of_comments', 10))
     top_level_comments = list(submission.comments)[:number_of_comments]
-    return submission.title, top_level_comments, is_nsfw
+    return submission, top_level_comments, is_nsfw

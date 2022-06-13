@@ -23,6 +23,7 @@ venv.bak/
 .idea/
 
 # Temp files and results of script
+assets/*/*
 *.mp3
 *.mp4
 *.png

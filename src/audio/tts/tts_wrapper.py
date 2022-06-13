@@ -8,7 +8,7 @@ from src.audio.tts.profane_filter import profane_filter
 async def tts(
         client: 'ClientSession',
         req_text: str,
-        filename: str,
+        filename: str | int,
         voice: str = 'en_us_002',  # List of valid voices in ValidVoices
 ):
     env_voice = getenv('tts_voice', '')
@@ -35,7 +35,7 @@ async def tts(
                 response = await result.json()
                 output_text += [response.get('data').get('v_str')][0]
         decoded_text = base64.b64decode(output_text)
-        with open(filename, 'wb') as out:
+        with open(f'assets/audio/{filename}.mp3', 'wb') as out:
             out.write(decoded_text)
         return
 
@@ -50,5 +50,5 @@ async def tts(
         response = await result.json()
         output_text = [response.get('data').get('v_str')][0]
     decoded_text = base64.b64decode(output_text)
-    with open(filename, 'wb') as out:
+    with open(f'assets/audio/{filename}.mp3', 'wb') as out:
         out.write(decoded_text)

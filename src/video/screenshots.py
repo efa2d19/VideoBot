@@ -11,7 +11,7 @@ from selenium.webdriver.chrome.options import Options
 from os import getenv
 
 
-class Driver:
+class Driver:  # TODO move to async code
     _window_size = "1920,1080"
     _chrome_options = Options()
     _chrome_options.add_argument("--headless")  # Open in background
@@ -47,8 +47,9 @@ class RedditScreenshot(Wait):
     def __call__(self,
                  link: str,
                  el_class: str,
-                 filename: str,
+                 filename: str | int,
                  is_nsfw: bool = False,
+                 is_title: bool = False,
                  ) -> None:
         if getenv('dark_theme', 'True') == 'True' and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
@@ -67,5 +68,7 @@ class RedditScreenshot(Wait):
                 self.click('//*[contains(text(), \'Yes\')]')
             except TimeoutException:
                 pass
-
-        self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(f'assets/images/{filename}.png')
+        if is_title:
+            self.find_element(f'//*[@id=\'post-content\']').screenshot(f'assets/img/{filename}.png')
+        else:
+            self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(f'assets/img/{filename}.png')
