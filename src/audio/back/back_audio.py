@@ -4,8 +4,6 @@ from src.api.youtube import youtube_get_file
 
 
 def background_audio(
-        file_title: str,
-        min_lenght: int,
 ) -> None:
     audio = getenv('enable_background_audio', 'True') == 'True'
     if audio:
@@ -13,4 +11,4 @@ def background_audio(
         background_video_query = getenv('background_audio_query', None)
         if not background_video_query:
             background_video_query = 'lofi hip hop short'
-        youtube_get_file(file_title, min_lenght, link, background_video_query, 'mp4')
+        youtube_get_file('back', link, background_video_query, 'mp3', 'audio')

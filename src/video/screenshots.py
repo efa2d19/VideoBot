@@ -68,4 +68,4 @@ class RedditScreenshot(Wait):
             except TimeoutException:
                 pass
 
-        element = self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(filename)
+        self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(f'assets/images/{filename}.png')
