@@ -4,7 +4,7 @@ from src.api.youtube import youtube_get_file
 
 
 async def background_audio(
-        lenght: int,
+        lenght: int | float,
 ) -> str:
     link = getenv('youtube_background_audio', False)
     background_video_query = getenv('background_audio_query', None)

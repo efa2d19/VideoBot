@@ -64,11 +64,18 @@ class RedditScreenshot(Wait):
         self._driver.get(link)
 
         if is_nsfw:
-            try:  # Closes nsfw warning if there is one
-                self.click('//*[contains(text(), \'Yes\')]')
-            except TimeoutException:
-                pass
+            if is_title:
+                try:  # Closes nsfw warning if there is one
+                    self.click('//*[contains(text(), \'Click to see nsfw\')]')
+                except TimeoutException:
+                    pass
+            else:
+                try:  # Closes nsfw warning if there is one
+                    self.click('//*[contains(text(), \'Yes\')]')
+                except TimeoutException:
+                    pass
+
         if is_title:
-            self.find_element(f'//*[@id=\'post-content\']').screenshot(f'assets/img/{filename}.png')
+            self.find_element(f'//*[contains(@id, \'t3_{el_class}\')]').screenshot(f'assets/img/{filename}.png')
         else:
             self.find_element(f'//*[contains(@id, \'t1_{el_class}\')]').screenshot(f'assets/img/{filename}.png')

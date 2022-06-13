@@ -2,7 +2,7 @@ python-dotenv==0.20.0
 asyncpraw==7.5.0
 aiohttp==3.8.1
 selenium==4.2.0
-arsenic==21.8
+# pyppeteer async selenium driver (:
 MoviePy==1.0.3
 pytube==12.1.0
 youtube-search-python==1.6.5
