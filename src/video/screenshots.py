@@ -28,7 +28,7 @@ class Driver:  # TODO move to async code
 
 class Wait:
     _method: str = By.XPATH
-    _timeout: int = 15
+    _timeout: int = 60
     _driver: webdriver = Driver().driver
 
     def find_element(self, el: str,) -> 'webdriver':

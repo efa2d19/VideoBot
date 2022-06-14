@@ -17,12 +17,14 @@ from glob import glob
 
 W, H = 1080, 1920
 
+# Settings
 opacity = int(getenv('opacity'))
 time_before_first_picture = float(getenv('time_before_first_picture'))
 time_before_tts = float(getenv('time_before_tts'))
 time_between_pictures = float(getenv('time_between_pictures'))
 volume_of_background_music = int(getenv('volume_of_background_music'))
 final_video_length = int(getenv('final_video_length'))
+delay_before_end = int(getenv('delay_before_end'))
 
 
 async def main():
@@ -31,10 +33,21 @@ async def main():
         submission, comments, is_nsfw = await reddit_setup(client)
         async_tasks = [tts(client, submission.title, 'title')]
         screenshot = RedditScreenshot()
-        screenshot(f'https://www.reddit.com{submission.permalink}', submission.id, 'title', is_nsfw, is_title=True)
+        screenshot(
+            f'https://www.reddit.com{submission.permalink}',
+            submission.id,
+            'title',
+            is_nsfw,
+            is_title=True
+        )
         for index, comment in enumerate(comments):
             async_tasks.append(tts(client, comment.body, index))
-            screenshot(f'https://www.reddit.com{comment.permalink}', comment.id, index, is_nsfw)
+            screenshot(
+                f'https://www.reddit.com{comment.permalink}',
+                comment.id,
+                index,
+                is_nsfw
+            )
         await asyncio.gather(*async_tasks)
     print('collected')
 
@@ -72,11 +85,15 @@ async def main():
 
     if getenv('enable_background_audio', 'True') == 'True':
         back_audio = (
-            AudioFileClip(await background_audio(video_duration))
-            .set_duration(video_duration)
+            AudioFileClip(await background_audio(video_duration + delay_before_end))
             .set_start(0)
+            .set_duration(video_duration + delay_before_end)
         )
-        back_audio = afx.audio_normalize(back_audio).volumex(volume_of_background_music / 100)
+        back_audio = (
+            afx
+            .audio_normalize(back_audio)
+            .volumex(volume_of_background_music / 100)
+        )
 
         audio_clip_list.insert(
             0,
@@ -96,7 +113,7 @@ async def main():
             ImageClip(f'assets/img/{image_title}.png')
             .set_start(audio_start - time_before_tts)
             .set_end(audio_end + time_before_tts)
-            .set_duration(time_before_tts * 2 + audio_duration)
+            .set_duration(time_before_tts * 2 + audio_duration, change_end=False)
             .set_position('center')
             .resize(width=W - 100)
             .set_opacity(opacity / 100)
@@ -128,10 +145,10 @@ async def main():
         )
 
     back_video = (
-        VideoFileClip(await background_video(video_duration))
+        VideoFileClip(await background_video(video_duration + delay_before_end))
         .without_audio()
         .set_start(0)
-        .set_end(video_duration)
+        .set_end(video_duration + delay_before_end)
         .resize(height=H)
         .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
     )
@@ -147,7 +164,7 @@ async def main():
     print('writing')
 
     final_video.write_videofile(
-        'final_video.mp4',
+        f'{getenv("final_video_name", "final_video")}.mp4',
         fps=30,
         audio_codec='aac',
         audio_bitrate='192k',
