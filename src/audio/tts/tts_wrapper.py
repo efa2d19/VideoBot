@@ -19,12 +19,22 @@ async def tts(
     req_text = profane_filter(req_text)
     output_text = ''
 
+    def text_len_sanitize(
+            text: str,
+            max_length: int,
+    ) -> list:
+        if '.' in text and all([split_text.__len__() < max_length for split_text in text.split('.')]):
+            return text.split(',')
+
+        if ',' in text and all([split_text.__len__() < max_length for split_text in text.split(',')]):
+            return text.split(',')
+
+        return [text[i:i + max_length] for i in range(0, len(text), max_length)]
+
     # use multiple api requests to make the sentence
     if len(req_text) > 299:
         # Split by comma or dot (else you can lose intonations), if there is non, split by groups of 299 chars
-        req_text_split = req_text.split('.') if '.' in req_text else req_text.split(',') if ',' in req_text else [
-            req_text[i:i + 299] for i in range(0, len(req_text), 299)]
-        for part in req_text_split:
+        for part in text_len_sanitize(req_text, 299):
             async with client.post(
                     url=uri_base,
                     params={
