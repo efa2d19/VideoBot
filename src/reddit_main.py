@@ -17,11 +17,12 @@ from glob import glob
 
 W, H = 1080, 1920
 
-opacity = 0.9  # TODO move to envs
-time_before_first_picture = 1  # TODO move to envs
-time_before_tts = 1  # TODO move to envs
-time_between_pictures = 2  # TODO move to envs
-volume_of_background_music = 10  # TODO move to envs (in percents)
+opacity = int(getenv('opacity'))
+time_before_first_picture = float(getenv('time_before_first_picture'))
+time_before_tts = float(getenv('time_before_tts'))
+time_between_pictures = float(getenv('time_between_pictures'))
+volume_of_background_music = int(getenv('volume_of_background_music'))
+final_video_length = int(getenv('final_video_length'))
 
 
 async def main():
@@ -48,26 +49,31 @@ async def main():
 
     video_duration = 0
     audio_clip_list = list()
+    correct_audio_offset = time_before_tts * 2 + time_between_pictures
 
     audio_title = create_audio_clip(
         'title',
-        time_before_first_picture,
+        time_before_first_picture + time_before_tts,
     )
-    video_duration += audio_title.duration
+    video_duration += audio_title.duration + time_before_first_picture + time_before_tts
     audio_clip_list.append(audio_title)
+    indexes_for_videos = list()
 
     for audio in range(comments.__len__()):
         temp_audio_clip = create_audio_clip(
             audio,
-            time_before_tts * 2 + time_between_pictures + video_duration,
+            correct_audio_offset + video_duration,
         )
-        video_duration += temp_audio_clip.duration
+        if video_duration + temp_audio_clip.duration + correct_audio_offset > final_video_length:
+            continue
+        video_duration += temp_audio_clip.duration + correct_audio_offset
         audio_clip_list.append(temp_audio_clip)
+        indexes_for_videos.append(audio)
 
     if getenv('enable_background_audio', 'True') == 'True':
         back_audio = (
-            AudioFileClip(await background_audio(time_before_tts * 2 + time_between_pictures + video_duration))
-            .set_duration(time_before_tts * 2 + time_between_pictures + video_duration)
+            AudioFileClip(await background_audio(video_duration))
+            .set_duration(video_duration)
             .set_start(0)
         )
         back_audio = afx.audio_normalize(back_audio).volumex(volume_of_background_music / 100)
@@ -93,7 +99,7 @@ async def main():
             .set_duration(time_before_tts * 2 + audio_duration)
             .set_position('center')
             .resize(width=W - 100)
-            .set_opacity(float(opacity))
+            .set_opacity(opacity / 100)
         )
 
     index_offset = 1
@@ -111,10 +117,10 @@ async def main():
         )
     )
 
-    for photo in range(comments.__len__()):
+    for photo in range(audio_clip_list.__len__() - index_offset):
         photo_clip_list.append(
             create_image_clip(
-                photo,
+                indexes_for_videos[photo],
                 audio_clip_list[photo + index_offset].start,
                 audio_clip_list[photo + index_offset].end,
                 audio_clip_list[photo + index_offset].duration
@@ -122,10 +128,10 @@ async def main():
         )
 
     back_video = (
-        VideoFileClip(await background_video(time_before_tts * 2 + time_between_pictures + video_duration))
+        VideoFileClip(await background_video(video_duration))
         .without_audio()
         .set_start(0)
-        .set_end(time_before_tts * 2 + time_between_pictures + video_duration)
+        .set_end(video_duration)
         .resize(height=H)
         .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
     )

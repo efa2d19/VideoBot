@@ -17,7 +17,10 @@ async def youtube_get_file(
             'resolution').desc().first().download(output_path=f'assets/{file_folder}/',
                                                   filename=f'{file_title}.{file_extension}')
     else:
-        yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)
+        if length < 60 * 3:
+            yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)
+        else:  # TODO test video length
+            yt_instance = CustomSearch(query, VideoDurationFilter.long, limit=20)
         yt_results = await yt_instance.next()
 
         yt_result = choice([video.get('link') for video in yt_results.get('result') if
