@@ -3,16 +3,17 @@ import base64
 from os import getenv
 
 from src.audio.tts.profane_filter import profane_filter
+from src.audio.tts.ValidVoices import voice_list
 
 
 async def tts(
         client: 'ClientSession',
         req_text: str,
         filename: str | int,
-        voice: str = 'en_us_002',  # List of valid voices in ValidVoices
+        voice: str = 'en_us_002',  # List of valid voices in ValidVoices.py
 ):
-    env_voice = getenv('tts_voice', '')
-    if env_voice:
+    env_voice = getenv('tts_voice')
+    if env_voice and env_voice in voice_list:
         voice = env_voice
 
     uri_base = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'

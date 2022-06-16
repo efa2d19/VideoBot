@@ -8,15 +8,21 @@ from os import getenv
 async def reddit_setup(client: 'ClientSession') -> tuple:
     default_useragent = 'Video bot'
 
-    reddit = asyncpraw.Reddit(
-        client_id=getenv('CLIENT_ID'),
-        client_secret=getenv('CLIENT_SECRET'),
+    client_id = getenv('CLIENT_ID')
+    client_secret = getenv('CLIENT_SECRET')
+
+    if not client_id or not client_secret:
+        raise ValueError('Check .env file, client_id or client_secret is not set')
+
+    reddit = asyncpraw.Reddit(  # TODO add support for 2FA
+        client_id=client_id,
+        client_secret=client_secret,
         user_agent=default_useragent,
         requestor_kwargs={'session': client},
     )
     reddit.read_only = True
 
-    subreddit = getenv('subreddit', False)
+    subreddit = getenv('subreddit')
     if not subreddit or subreddit == 'random':  # TODO add check for normal comments
         subreddit = await reddit.random_subreddit()
     else:
@@ -39,6 +45,6 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
             break
     # submission.comment_sort = "new"
 
-    number_of_comments = int(getenv('number_of_comments', 10))
+    number_of_comments = int(getenv('number_of_comments', 15)) if getenv('number_of_comments', 15) else 15
     top_level_comments = list(submission.comments)[:number_of_comments]
     return submission, top_level_comments, is_nsfw
