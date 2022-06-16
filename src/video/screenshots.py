@@ -41,7 +41,7 @@ class Wait:
             WebDriverWait(self._driver, self._timeout).until(ec.element_to_be_clickable((self._method, el))).click()
 
 
-class RedditScreenshot(Wait):
+class RedditScreenshot(Wait):  # TODO add checks for content like photos or videos
     __dark_mode_enabled: bool = False
 
     def __call__(self,

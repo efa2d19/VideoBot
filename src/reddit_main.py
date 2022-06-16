@@ -18,6 +18,7 @@ from glob import glob
 W, H = 1080, 1920
 
 # Settings
+# TODO add checks if envs unset or incorrect
 opacity = int(getenv('opacity'))
 time_before_first_picture = float(getenv('time_before_first_picture'))
 time_before_tts = float(getenv('time_before_tts'))
@@ -25,12 +26,21 @@ time_between_pictures = float(getenv('time_between_pictures'))
 volume_of_background_music = int(getenv('volume_of_background_music'))
 final_video_length = int(getenv('final_video_length'))
 delay_before_end = int(getenv('delay_before_end'))
+manual_mode = getenv('manual_mode')
 
 
 async def main():
-    print('started')
+    print('started')  # TODO add progress bars in CLI
     async with ClientSession() as client:
         submission, comments, is_nsfw = await reddit_setup(client)
+        if manual_mode:
+            print(f'Is this submission ok? (y/n/e)\n{submission.title}')
+            manual_confirmation = input()
+            if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'exit'])):
+                print('Exiting...')
+                exit(1)
+            if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
+                await main()
         async_tasks = [tts(client, submission.title, 'title')]
         screenshot = RedditScreenshot()
         screenshot(
@@ -164,7 +174,7 @@ async def main():
     print('writing')
 
     final_video.write_videofile(
-        f'{getenv("final_video_name", "final_video")}.mp4',
+        f'{getenv("final_video_name", "final_video")}.mp4',  # TODO test envs
         fps=30,
         audio_codec='aac',
         audio_bitrate='192k',

@@ -12,12 +12,12 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
         client_id=getenv('CLIENT_ID'),
         client_secret=getenv('CLIENT_SECRET'),
         user_agent=default_useragent,
-        requestor_kwargs={"session": client},
+        requestor_kwargs={'session': client},
     )
     reddit.read_only = True
 
     subreddit = getenv('subreddit', False)
-    if not subreddit or subreddit == 'random':
+    if not subreddit or subreddit == 'random':  # TODO add check for normal comments
         subreddit = await reddit.random_subreddit()
     else:
         subreddit = await reddit.subreddit(subreddit)
