@@ -28,18 +28,24 @@ class RedditScreenshot(Browser):
     __dark_mode_enabled = False
 
     @staticmethod
-    async def dark_theme(
+    async def dark_theme(  # TODO test it, works bad
             page: 'launch',
     ) -> None:
         if getenv('dark_theme', 'True') == 'True':
             el = await page.waitForXPath('//*[contains(@class, \'header-user-dropdown\')]')
             await el.click()
+
             try:
                 el = await page.waitForXPath('//*[contains(text(), \'Settings\')]/ancestor::button[1]')
                 await el.click()
             except BrowserTimeoutError:  # Sometimes there's no Settings (lol idk)
                 pass
+
             el = await page.waitForXPath('//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]')
+            await el.click()
+
+            # Closes settings
+            el = await page.waitForXPath('//*[contains(@class, \'header-user-dropdown\')]')
             await el.click()
 
     async def __call__(

@@ -5,7 +5,7 @@ from os import getenv
 from src.audio.tts.profane_filter import profane_filter
 
 
-async def tts(
+async def tts(  # TODO test it, failed once, wrote blank file
         client: 'ClientSession',
         req_text: str,
         filename: str | int,

@@ -191,7 +191,7 @@ async def main():
     print('writing')
 
     final_video.write_videofile(
-        f'{getenv("final_video_name", "final_video")}.mp4',  # TODO test envs
+        f'{getenv("final_video_name", "final_video")}.mp4',  # TODO test is, fails
         fps=30,
         audio_codec='aac',
         audio_bitrate='192k',
