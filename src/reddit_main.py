@@ -21,15 +21,16 @@ W, H = 1080, 1920
 
 load_dotenv()
 
-# Settings
-# TODO add checks if envs unset or incorrect
-opacity = int(getenv('opacity'))
-time_before_first_picture = float(getenv('time_before_first_picture'))
-time_before_tts = float(getenv('time_before_tts'))
-time_between_pictures = float(getenv('time_between_pictures'))
-volume_of_background_music = int(getenv('volume_of_background_music'))
-final_video_length = int(getenv('final_video_length'))
-delay_before_end = int(getenv('delay_before_end'))
+# Settings w/ checks for incorrect envs
+opacity = int(getenv('opacity')) if getenv('opacity') else 95
+time_before_first_picture = float(getenv('time_before_first_picture')) if getenv('time_before_first_picture') else 1
+time_before_tts = float(getenv('time_before_tts')) if getenv('time_before_tts') else 0.5
+time_between_pictures = float(getenv('time_between_pictures')) if getenv('time_between_pictures') else 1
+volume_of_background_music = int(getenv('volume_of_background_music')) if getenv('volume_of_background_music') else 15
+final_video_length = int(getenv('final_video_length')) if getenv('final_video_length') else 60
+delay_before_end = int(getenv('delay_before_end')) if getenv('delay_before_end') else 1
+final_video_name = getenv("final_video_name") if getenv("final_video_name") else "final_video"
+enable_background_audio = getenv('enable_background_audio') if getenv('enable_background_audio') else 'True'
 manual_mode = getenv('manual_mode')
 
 
@@ -38,13 +39,22 @@ async def main():
     async with ClientSession() as client:
         submission, comments, is_nsfw = await reddit_setup(client)
         if manual_mode:
-            print(f'Is this submission ok? (y/n/e)\n{submission.title}')
-            manual_confirmation = input()
-            if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'exit'])):
-                print('Exiting...')
-                exit(1)
-            if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
-                await main()
+            while True:
+                print(f'Is this submission ok? (y/n/e)\n{submission.title}')
+                manual_confirmation = input()
+                if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation],
+                               [i for i in 'exit'])):
+                    print('Exiting...')
+                    exit(1)
+                if not all(
+                        map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'no'])):
+                    await main()
+                if not all(
+                        map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
+                    break
+                else:
+                    print('I don\'t understand you... Let\'s try again')
+
         async_tasks = list()
         screenshot = RedditScreenshot()
         async_browser = await screenshot.get_browser()
@@ -110,7 +120,7 @@ async def main():
         audio_clip_list.append(temp_audio_clip)
         indexes_for_videos.append(audio)
 
-    if getenv('enable_background_audio', 'True') == 'True':
+    if enable_background_audio == 'True':
         back_audio = (
             AudioFileClip(await background_audio(video_duration + delay_before_end))
             .set_start(0)
@@ -147,7 +157,7 @@ async def main():
         )
 
     index_offset = 1
-    if getenv('enable_background_audio', 'True') == 'True':
+    if enable_background_audio == 'True':
         index_offset += 1
 
     photo_clip_list = list()
@@ -191,7 +201,7 @@ async def main():
     print('writing')
 
     final_video.write_videofile(
-        f'{getenv("final_video_name", "final_video")}.mp4',  # TODO test is, fails
+        f'{final_video_name}.mp4',
         fps=30,
         audio_codec='aac',
         audio_bitrate='192k',
@@ -199,3 +209,6 @@ async def main():
 
     # Clean up
     [remove(asset) for asset in glob('assets/*/*')]
+
+    # Exiting
+    exit(0)

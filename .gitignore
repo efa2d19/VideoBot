@@ -22,6 +22,9 @@ venv.bak/
 # Jetbrains IDE's
 .idea/
 
+# MacOS files
+.DS_Store
+
 # Temp files and results of script
 assets/*/*
 *.mp3
