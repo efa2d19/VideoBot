@@ -1,4 +1,6 @@
 import asyncio
+from datetime import datetime
+
 from aiohttp import ClientSession
 
 from src.api.reddit import reddit_setup
@@ -55,6 +57,7 @@ async def main():
                 else:
                     print('I don\'t understand you... Let\'s try again')
 
+        start = datetime.now()
         async_tasks = list()
         screenshot = RedditScreenshot()
         async_browser = await screenshot.get_browser()
@@ -86,6 +89,9 @@ async def main():
             )
         await asyncio.gather(*async_tasks)
         await screenshot.close_browser(async_browser)
+        end = datetime.now()
+        print((end - start).total_seconds())
+
     print('collected')
 
     def create_audio_clip(

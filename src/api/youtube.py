@@ -8,7 +8,8 @@ async def search_yt(
         query: str,
         length: int | float,
 ) -> str:
-    if length < 60 * 3:
+    short_length = 60 * 3
+    if length < short_length:
         yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)
     else:  # TODO test video length
         yt_instance = CustomSearch(query, VideoDurationFilter.long, limit=20)
@@ -16,7 +17,7 @@ async def search_yt(
     yt_results = await yt_instance.next()
 
     yt_length_check = [video.get('link') for video in yt_results.get('result') if
-                       video.get('duration') and length >= int(video.get('duration').split(':')[0]) * 60 + int(
+                       video.get('duration') and short_length >= int(video.get('duration').split(':')[0]) * 60 + int(
                            video.get('duration').split(':')[1]) >= length]
 
     yt_result = choice(yt_length_check if yt_length_check else [None])

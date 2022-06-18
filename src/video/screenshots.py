@@ -3,6 +3,57 @@ from pyppeteer.errors import TimeoutError as BrowserTimeoutError
 
 from os import getenv
 
+from typing import TypeVar, Optional, Union, Callable
+
+
+_function = TypeVar('_function', bound=Callable[..., object])
+_exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
+
+
+class ExceptionDecorator:
+    __default_exception = BrowserTimeoutError
+
+    def __init__(
+            self,
+            exception: '_exceptions' = None,
+    ):
+        if exception:
+            self.__exception = exception
+        else:
+            self.__exception = self.__default_exception
+
+    def __call__(
+            self,
+            func,
+    ):
+        async def wrapper(*args, **kwargs):
+            try:
+                obj_to_return = await func(*args, **kwargs)
+                return obj_to_return
+            except Exception as caughtException:
+                if type(self.__exception) == type:
+                    if caughtException == self.__exception:
+                        print('expected', caughtException)
+                    else:
+                        print('unexpected', caughtException)
+                else:
+                    if caughtException in self.__exception:
+                        print('expected', caughtException)
+                    else:
+                        print('unexpected', caughtException)
+
+        return wrapper
+
+
+def catch_exception(
+        func: Optional[_function],
+        exception: Optional[_exceptions] = None,
+) -> ExceptionDecorator | _function:
+    exceptor = ExceptionDecorator(exception=exception)
+    if func:
+        exceptor = exceptor(func)
+    return exceptor
+
 
 # It exists, so I can import everything at once
 # And to add it to other classes for other socials
@@ -14,7 +65,7 @@ class Browser:
 
     async def get_browser(
             self,
-    ) -> 'launch':
+    ):
         return await launch(self.default_Viewport)
 
     @staticmethod
@@ -24,33 +75,57 @@ class Browser:
         await browser.close()
 
 
-class RedditScreenshot(Browser):
-    __dark_mode_enabled = False
+class Wait:
 
     @staticmethod
-    async def dark_theme(  # TODO test it, works bad
+    async def find_xpath(
+            page,
+            xpath: str,
+    ):
+        el = await page.waitForXPath(xpath)
+        return el
+
+    @catch_exception
+    async def click(
+            self,
+            page,
+            xpath: str,
+    ) -> None:
+        el = await self.find_xpath(page, xpath)
+        await el.click()
+
+    @catch_exception
+    async def screenshot(
+            self,
+            page,
+            xpath: str,
+            options: dict,
+    ) -> None:
+        el = await self.find_xpath(page, xpath)
+        await el.screenshot(options)
+
+
+class RedditScreenshot(Browser, Wait):
+    __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
+
+    async def dark_theme(
+            self,
             page: 'launch',
     ) -> None:
-        if getenv('dark_theme', 'True') == 'True':
-            el = await page.waitForXPath('//*[contains(@class, \'header-user-dropdown\')]')
-            await el.click()
+        if self.__dark_mode == 'True':
 
-            try:
-                el = await page.waitForXPath('//*[contains(text(), \'Settings\')]/ancestor::button[1]')
-                await el.click()
-            except BrowserTimeoutError:  # Sometimes there's no Settings (lol idk)
-                pass
+            await self.click(page, '//*[contains(@class, \'header-user-dropdown\')]')
 
-            el = await page.waitForXPath('//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]')
-            await el.click()
+            await self.click(page, '//*[contains(text(), \'Settings\')]/ancestor::button[1]')
+
+            await self.click(page, '//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]')
 
             # Closes settings
-            el = await page.waitForXPath('//*[contains(@class, \'header-user-dropdown\')]')
-            await el.click()
+            await self.click(page, '//*[contains(@class, \'header-user-dropdown\')]')
 
     async def __call__(
             self,
-            browser: 'launch',
+            browser,
             link: str,
             el_class: str,
             filename: str | int,
@@ -62,15 +137,17 @@ class RedditScreenshot(Browser):
         await self.dark_theme(reddit_main)
 
         if is_nsfw:
-            try:  # Closes nsfw warning if there is one
-                el = await reddit_main.waitForXPath('//*[contains(text(), \'Click to see nsfw\')]')
-                await el.click()
-            except BrowserTimeoutError:
-                try:  # Closes nsfw warning if there is one
-                    el = await reddit_main.waitForXPath('//*[contains(text(), \'Yes\')]')
-                    await el.click()
-                except BrowserTimeoutError:
-                    pass
+            await self.click(
+                reddit_main,
+                '//*[contains(text(), \'Click to see nsfw\')]'
+            )
+            await self.click(
+                reddit_main,
+                '//*[contains(text(), \'Yes\')]'
+            )
 
-        el = await reddit_main.waitForXPath(f'//*[contains(@id, \'{el_class}\')]')
-        await el.screenshot({'path': f'assets/img/{filename}.png'})
+        await self.screenshot(
+            reddit_main,
+            f'//*[contains(@id, \'{el_class}\')]',
+            {'path': f'assets/img/{filename}.png'}
+        )
