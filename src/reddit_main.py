@@ -12,7 +12,12 @@ from src.audio.tts.tts_wrapper import tts
 from src.audio.back.back_audio import background_audio
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
-from moviepy.editor import AudioFileClip, CompositeAudioClip, afx
+from moviepy.video.fx.loop import loop
+
+from moviepy.editor import AudioFileClip, CompositeAudioClip
+from moviepy.audio.fx.audio_loop import audio_loop
+from moviepy.audio.fx.volumex import volumex
+from moviepy.audio.fx.audio_normalize import audio_normalize
 
 from os import getenv, remove
 from glob import glob
@@ -130,18 +135,15 @@ async def main():
         back_audio = (
             AudioFileClip(await background_audio(video_duration + delay_before_end))
             .set_start(0)
-            .set_duration(video_duration + delay_before_end)
-        )
-        back_audio = (
-            afx
-            .audio_normalize(back_audio)
-            .volumex(volume_of_background_music / 100)
+            .fx(audio_loop, duration=video_duration)  # TODO Check if works
+            .fx(audio_normalize)  # TODO Check if works
+            .fx(volumex, volume_of_background_music / 100)  # TODO Check if works
+            # .set_duration(video_duration + delay_before_end)
         )
 
         audio_clip_list.insert(
             0,
-            back_audio
-            # back_audio.fx(afx.audio_loop())  # TODO Check if works
+            back_audio,
         )
 
     final_audio = CompositeAudioClip(audio_clip_list)
@@ -191,9 +193,10 @@ async def main():
         VideoFileClip(await background_video(video_duration + delay_before_end))
         .without_audio()
         .set_start(0)
-        .set_end(video_duration + delay_before_end)
         .resize(height=H)
         .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
+        .fx(loop, duration=video_duration)  # TODO Check if works
+        # .set_end(video_duration + delay_before_end)
     )
 
     photo_clip_list.insert(

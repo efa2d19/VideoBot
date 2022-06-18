@@ -70,7 +70,7 @@ class Browser:
 
     @staticmethod
     async def close_browser(
-            browser: 'launch',
+            browser,
     ) -> None:
         await browser.close()
 
@@ -160,15 +160,17 @@ class RedditScreenshot(Browser, Wait):
         if is_nsfw:
             await self.click(
                 reddit_main,
-                '//*[contains(text(), \'Click to see nsfw\')]'
+                '//*[contains(text(), \'Click to see nsfw\')]',
+                {'timeout': 5000},
             )
             await self.click(
                 reddit_main,
-                '//*[contains(text(), \'Yes\')]'
+                '//*[contains(text(), \'Yes\')]',
+                {'timeout': 5000},
             )
 
         await self.screenshot(
             reddit_main,
             f'//*[contains(@id, \'{el_class}\')]',
-            {'path': f'assets/img/{filename}.png'}
+            {'path': f'assets/img/{filename}.png'},
         )

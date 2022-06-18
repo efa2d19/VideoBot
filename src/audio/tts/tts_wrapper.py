@@ -1,6 +1,8 @@
-from aiohttp import ClientSession
 import base64
 from os import getenv
+
+from aiohttp import ClientSession
+from aiofiles import open
 
 from src.audio.tts.profane_filter import profane_filter
 from src.audio.tts.ValidVoices import voice_list
@@ -45,9 +47,13 @@ async def tts(  # TODO test it, failed once, wrote blank file
                     }) as result:
                 response = await result.json()
                 output_text += [response.get('data').get('v_str')][0]
+        if not output_text:
+            print(f'no response - file {filename}.mp3')
         decoded_text = base64.b64decode(output_text)
-        with open(f'assets/audio/{filename}.mp3', 'wb') as out:
-            out.write(decoded_text)
+        if not decoded_text:
+            print(f'no decoded_text - file {filename}.mp3')
+        async with open(f'assets/audio/{filename}.mp3', 'wb') as out:
+            await out.write(decoded_text)
         return
 
     # if under 299 characters do it in one
@@ -60,6 +66,10 @@ async def tts(  # TODO test it, failed once, wrote blank file
             }) as result:
         response = await result.json()
         output_text = [response.get('data').get('v_str')][0]
+    if not output_text:
+        print(f'no response - file {filename}.mp3')
     decoded_text = base64.b64decode(output_text)
-    with open(f'assets/audio/{filename}.mp3', 'wb') as out:
-        out.write(decoded_text)
+    if not decoded_text:
+        print(f'no decoded_text - file {filename}.mp3')
+    async with open(f'assets/audio/{filename}.mp3', 'wb') as out:
+        await out.write(decoded_text)
