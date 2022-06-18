@@ -131,14 +131,15 @@ async def main():
         audio_clip_list.append(temp_audio_clip)
         indexes_for_videos.append(audio)
 
+    video_duration += delay_before_end
+
     if enable_background_audio == 'True':
         back_audio = (
-            AudioFileClip(await background_audio(video_duration + delay_before_end))
+            AudioFileClip(await background_audio(video_duration))
             .set_start(0)
-            .fx(audio_loop, duration=video_duration)  # TODO Check if works
-            .fx(audio_normalize)  # TODO Check if works
-            .fx(volumex, volume_of_background_music / 100)  # TODO Check if works
-            # .set_duration(video_duration + delay_before_end)
+            .fx(audio_loop, duration=video_duration)
+            .fx(audio_normalize)
+            .fx(volumex, volume_of_background_music / 100)
         )
 
         audio_clip_list.insert(
@@ -190,13 +191,12 @@ async def main():
         )
 
     back_video = (
-        VideoFileClip(await background_video(video_duration + delay_before_end))
+        VideoFileClip(await background_video(video_duration))
         .without_audio()
         .set_start(0)
-        .resize(height=H)
+        .resize(height=H, width=W)
         .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
-        .fx(loop, duration=video_duration)  # TODO Check if works
-        # .set_end(video_duration + delay_before_end)
+        .fx(loop, duration=video_duration)
     )
 
     photo_clip_list.insert(

@@ -8,17 +8,21 @@ from src.audio.tts.profane_filter import profane_filter
 from src.audio.tts.ValidVoices import voice_list
 
 
-async def tts(  # TODO test it, failed once, wrote blank file
+async def tts(
         client: 'ClientSession',
         req_text: str,
         filename: str | int,
         voice: str = 'en_us_002',  # List of valid voices in ValidVoices.py
-):
+) -> None:
     env_voice = getenv('tts_voice')
     if env_voice and env_voice in voice_list:
         voice = env_voice
 
     uri_base = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'
+
+    if not req_text:
+        raise ValueError(f'Text never came for file - {filename}.mp3')
+
     req_text = profane_filter(req_text)
     output_text = ''
 
@@ -47,11 +51,16 @@ async def tts(  # TODO test it, failed once, wrote blank file
                     }) as result:
                 response = await result.json()
                 output_text += [response.get('data').get('v_str')][0]
-        if not output_text:
+        if not output_text:  # TODO wrote blank file once, fixes, more test needed
             print(f'no response - file {filename}.mp3')
+            await tts(
+                client,
+                req_text,
+                filename,
+                voice,
+            )
+            return
         decoded_text = base64.b64decode(output_text)
-        if not decoded_text:
-            print(f'no decoded_text - file {filename}.mp3')
         async with open(f'assets/audio/{filename}.mp3', 'wb') as out:
             await out.write(decoded_text)
         return
@@ -66,10 +75,16 @@ async def tts(  # TODO test it, failed once, wrote blank file
             }) as result:
         response = await result.json()
         output_text = [response.get('data').get('v_str')][0]
-    if not output_text:
+    if not output_text:  # TODO test it, failed once, wrote blank file
         print(f'no response - file {filename}.mp3')
+        await tts(
+            client,
+            req_text,
+            filename,
+            voice,
+        )
+        return
     decoded_text = base64.b64decode(output_text)
-    if not decoded_text:
-        print(f'no decoded_text - file {filename}.mp3')
     async with open(f'assets/audio/{filename}.mp3', 'wb') as out:
         await out.write(decoded_text)
+    return

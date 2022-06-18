@@ -1,9 +1,11 @@
 from pyppeteer import launch
+from pyppeteer.page import Page as PageCls
+from pyppeteer.browser import Browser as BrowserCls
 from pyppeteer.errors import TimeoutError as BrowserTimeoutError
 
 from os import getenv
 
-from typing import TypeVar, Optional, Union, Callable
+from typing import TypeVar, Optional, Union, Callable, Coroutine
 
 
 _function = TypeVar('_function', bound=Callable[..., object])
@@ -11,11 +13,11 @@ _exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
 
 
 class ExceptionDecorator:
-    __default_exception = BrowserTimeoutError
+    __default_exception = BrowserTimeoutError  # TODO it's something else, always triggers unexpected
 
     def __init__(
             self,
-            exception: '_exceptions' = None,
+            exception: Optional[_exceptions] = None,
     ):
         if exception:
             self.__exception = exception
@@ -30,7 +32,7 @@ class ExceptionDecorator:
             try:
                 obj_to_return = await func(*args, **kwargs)
                 return obj_to_return
-            except Exception as caughtException:
+            except Exception as caughtException:  # TODO add .log file for errors
                 if type(self.__exception) == type:
                     if caughtException == self.__exception:
                         print('expected', caughtException)
@@ -65,12 +67,12 @@ class Browser:
 
     async def get_browser(
             self,
-    ):
+    ) -> 'BrowserCls':
         return await launch(self.default_Viewport)
 
     @staticmethod
     async def close_browser(
-            browser,
+            browser: BrowserCls,
     ) -> None:
         await browser.close()
 
@@ -79,74 +81,86 @@ class Wait:
 
     @staticmethod
     async def find_xpath(
-            page,
-            xpath: str,
+            page_instance: PageCls,
+            xpath: Optional[str] = None,
             options: Optional[dict] = None,
     ):
         if options:
-            el = await page.waitForXPath(xpath, options=options)
+            el = await page_instance.waitForXPath(xpath, options=options)
         else:
-            el = await page.waitForXPath(xpath)
+            el = await page_instance.waitForXPath(xpath)
         return el
 
     @catch_exception
     async def click(
             self,
-            page,
-            xpath: str,
+            page_instance: Optional[PageCls] = None,
+            xpath: Optional[str] = None,
             find_options: Optional[dict] = None,
+            el: Optional[Coroutine] = None,
     ) -> None:
-        el = await self.find_xpath(page, xpath, find_options)
+        if not el:
+            el = await self.find_xpath(page_instance, xpath, find_options)
         await el.click()
 
     @catch_exception
     async def screenshot(
             self,
-            page,
-            xpath: str,
-            options: dict,
+            page_instance: Optional[PageCls] = None,
+            xpath: Optional[str] = None,
+            options: Optional[dict] = None,
             find_options: Optional[dict] = None,
+            el: Optional[Coroutine] = None,
     ) -> None:
-        el = await self.find_xpath(page, xpath, find_options)
+        if options is None:
+            options = {}
+        if not el:
+            el = await self.find_xpath(page_instance, xpath, find_options)
         await el.screenshot(options)
 
 
 class RedditScreenshot(Browser, Wait):
     __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
 
-    async def dark_theme(
+    async def dark_theme(  # TODO
             self,
-            page,
+            page_instance: Optional[PageCls] = None,
     ) -> None:
         if self.__dark_mode == 'True':
 
-            await self.click(
-                page,
+            user_settings = await self.find_xpath(
+                page_instance, 
                 '//*[contains(@class, \'header-user-dropdown\')]',
+                {'timeout': 5000},
             )
 
             await self.click(
-                page,
+                page_instance,
+                el=user_settings
+            )
+
+            # It's normal not to find it, sometimes there is none :shrug:
+            await self.click(
+                page_instance,
                 '//*[contains(text(), \'Settings\')]/ancestor::button[1]',
                 {'timeout': 5000},
             )
 
             await self.click(
-                page,
+                page_instance,
                 '//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]',
                 {'timeout': 5000},
             )
 
             # Closes settings
             await self.click(
-                page,
-                '//*[contains(@class, \'header-user-dropdown\')]',
-                {'timeout': 5000},
+                page_instance,
+                el=user_settings
             )
 
     async def __call__(
             self,
-            browser,
+            browser: 'BrowserCls',
             link: str,
             el_class: str,
             filename: str | int,
