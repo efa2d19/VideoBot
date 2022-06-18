@@ -81,8 +81,12 @@ class Wait:
     async def find_xpath(
             page,
             xpath: str,
+            options: Optional[dict] = None,
     ):
-        el = await page.waitForXPath(xpath)
+        if options:
+            el = await page.waitForXPath(xpath, options=options)
+        else:
+            el = await page.waitForXPath(xpath)
         return el
 
     @catch_exception
@@ -90,8 +94,9 @@ class Wait:
             self,
             page,
             xpath: str,
+            find_options: Optional[dict] = None,
     ) -> None:
-        el = await self.find_xpath(page, xpath)
+        el = await self.find_xpath(page, xpath, find_options)
         await el.click()
 
     @catch_exception
@@ -100,8 +105,9 @@ class Wait:
             page,
             xpath: str,
             options: dict,
+            find_options: Optional[dict] = None,
     ) -> None:
-        el = await self.find_xpath(page, xpath)
+        el = await self.find_xpath(page, xpath, find_options)
         await el.screenshot(options)
 
 
@@ -110,18 +116,33 @@ class RedditScreenshot(Browser, Wait):
 
     async def dark_theme(
             self,
-            page: 'launch',
+            page,
     ) -> None:
         if self.__dark_mode == 'True':
 
-            await self.click(page, '//*[contains(@class, \'header-user-dropdown\')]')
+            await self.click(
+                page,
+                '//*[contains(@class, \'header-user-dropdown\')]',
+            )
 
-            await self.click(page, '//*[contains(text(), \'Settings\')]/ancestor::button[1]')
+            await self.click(
+                page,
+                '//*[contains(text(), \'Settings\')]/ancestor::button[1]',
+                {'timeout': 5000},
+            )
 
-            await self.click(page, '//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]')
+            await self.click(
+                page,
+                '//*[contains(text(), \'Dark Mode\')]/ancestor::button[1]',
+                {'timeout': 5000},
+            )
 
             # Closes settings
-            await self.click(page, '//*[contains(@class, \'header-user-dropdown\')]')
+            await self.click(
+                page,
+                '//*[contains(@class, \'header-user-dropdown\')]',
+                {'timeout': 5000},
+            )
 
     async def __call__(
             self,
