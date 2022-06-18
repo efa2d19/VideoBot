@@ -1,4 +1,6 @@
 import asyncio
+from datetime import datetime
+
 from aiohttp import ClientSession
 
 from src.api.reddit import reddit_setup
@@ -10,12 +12,21 @@ from src.audio.tts.tts_wrapper import tts
 from src.audio.back.back_audio import background_audio
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
-from moviepy.editor import AudioFileClip, CompositeAudioClip, afx
+from moviepy.video.fx.loop import loop
+
+from moviepy.editor import AudioFileClip, CompositeAudioClip
+from moviepy.audio.fx.audio_loop import audio_loop
+from moviepy.audio.fx.volumex import volumex
+from moviepy.audio.fx.audio_normalize import audio_normalize
 
 from os import getenv, remove
 from glob import glob
 
+from dotenv import load_dotenv
+
 W, H = 1080, 1920
+
+load_dotenv()
 
 # Settings w/ checks for incorrect envs
 opacity = int(getenv('opacity')) if getenv('opacity') else 95
@@ -51,24 +62,41 @@ async def main():
                 else:
                     print('I don\'t understand you... Let\'s try again')
 
-        async_tasks = [tts(client, submission.title, 'title')]
+        start = datetime.now()
+        async_tasks = list()
         screenshot = RedditScreenshot()
-        screenshot(
-            f'https://www.reddit.com{submission.permalink}',
-            submission.id,
-            'title',
-            is_nsfw,
-            is_title=True
+        async_browser = await screenshot.get_browser()
+        async_tasks.append(
+            tts(client, submission.title, 'title')
+        )
+        async_tasks.append(
+            screenshot(
+                async_browser,
+                f'https://www.reddit.com{submission.permalink}',
+                submission.fullname,
+                'title',
+                is_nsfw,
+            )
         )
         for index, comment in enumerate(comments):
-            async_tasks.append(tts(client, comment.body, index))
-            screenshot(
-                f'https://www.reddit.com{comment.permalink}',
-                comment.id,
-                index,
-                is_nsfw
+            async_tasks.append(
+                tts(client, comment.body, index)
+            )
+
+            async_tasks.append(
+                screenshot(
+                    async_browser,
+                    f'https://www.reddit.com{comment.permalink}',
+                    comment.fullname,
+                    index,
+                    is_nsfw
+                )
             )
         await asyncio.gather(*async_tasks)
+        await screenshot.close_browser(async_browser)
+        end = datetime.now()
+        print((end - start).total_seconds())
+
     print('collected')
 
     def create_audio_clip(
@@ -103,22 +131,20 @@ async def main():
         audio_clip_list.append(temp_audio_clip)
         indexes_for_videos.append(audio)
 
+    video_duration += delay_before_end
+
     if enable_background_audio == 'True':
         back_audio = (
-            AudioFileClip(await background_audio(video_duration + delay_before_end))
+            AudioFileClip(await background_audio(video_duration))
             .set_start(0)
-            .set_duration(video_duration + delay_before_end)
-        )
-        back_audio = (
-            afx
-            .audio_normalize(back_audio)
-            .volumex(volume_of_background_music / 100)
+            .fx(audio_loop, duration=video_duration)
+            .fx(audio_normalize)
+            .fx(volumex, volume_of_background_music / 100)
         )
 
         audio_clip_list.insert(
             0,
-            back_audio
-            # back_audio.fx(afx.audio_loop())  # TODO Check if works
+            back_audio,
         )
 
     final_audio = CompositeAudioClip(audio_clip_list)
@@ -165,12 +191,12 @@ async def main():
         )
 
     back_video = (
-        VideoFileClip(await background_video(video_duration + delay_before_end))
+        VideoFileClip(await background_video(video_duration))
         .without_audio()
         .set_start(0)
-        .set_end(video_duration + delay_before_end)
-        .resize(height=H)
+        .resize(height=H, width=W)
         .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
+        .fx(loop, duration=video_duration)
     )
 
     photo_clip_list.insert(
