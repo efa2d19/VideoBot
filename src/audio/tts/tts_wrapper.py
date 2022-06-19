@@ -1,10 +1,12 @@
-import base64
-from os import getenv
-
-from src.audio.tts.ValidVoices import voice_list
-
 from aiohttp import ClientSession
 from aiofiles import open
+
+import base64
+
+from os import getenv
+from re import sub
+
+from src.audio.tts.ValidVoices import voice_list
 
 
 class TikTokTTS:
@@ -23,7 +25,19 @@ class TikTokTTS:
             self.voice = voice
 
     @staticmethod
-    def text_len_sanitize(
+    def text_sanitize(
+            text: str,
+    ) -> str:
+        # Removes newlines
+        text = sub(r'\n', '', text)
+        # Replace hyperlinks with text
+        text = sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+        # Removes all links
+        text = sub(r'(https|http|file|ftp):?\/?(\S+|\w+.\w+\/\w+)?', '', text)
+        return text
+
+    @staticmethod
+    def text_len_sanitize(  # TODO chews last words, fix needed
             text: str,
             max_length: int,
     ) -> list:
@@ -41,7 +55,6 @@ class TikTokTTS:
             text_to_tts: str,
             filename: str,  # TODO remove after debug
     ) -> str:
-
         async with self.client.post(
                 url=self.uri_base,
                 params={
@@ -52,16 +65,11 @@ class TikTokTTS:
             response = await result.json()
             output_text = [response.get('data').get('v_str')][0]
 
-        if not output_text:  # TODO wrote blank file once, fixes, resend request doesn't help(
+        if not output_text:  # TODO wrote blank file once, fixes, resend request doesn't help
             print(f'no response - file {filename}.mp3')
             print('---------')
             print(text_to_tts)
             print('---------')
-            # output_text = await self.get_tts(
-            #     text_to_tts,
-            #     filename,
-            # )
-
         return output_text
 
     @staticmethod
@@ -82,6 +90,8 @@ class TikTokTTS:
         if not req_text:
             raise ValueError(f'Text never came for file - {filename}.mp3')
 
+        req_text = self.text_sanitize(req_text)
+
         if getenv("PROFANE_FILTER", 'False') == 'True':
             from src.audio.tts.profane_filter import profane_filter
 
@@ -92,7 +102,8 @@ class TikTokTTS:
         # use multiple api requests to make the sentence
         if len(req_text) > 299:
             for part in self.text_len_sanitize(req_text, 299):
-                output_text += await self.get_tts(part, filename)
+                if part:
+                    output_text += await self.get_tts(part, filename)
 
             await self.decode_tts(output_text, filename)
             return
