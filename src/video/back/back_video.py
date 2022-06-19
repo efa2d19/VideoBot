@@ -10,6 +10,5 @@ async def background_video(
     background_video_query = getenv('background_video_query')
     if not background_video_query:
         background_video_query = 'minecraft parkour gameplay'
-    # TODO add check for vertical video, can't crop 'em
     await youtube_get_file('back', link, background_video_query, lenght, 'mp4')
     return 'assets/video/back.mp4'

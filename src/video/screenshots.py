@@ -13,7 +13,7 @@ _exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
 
 
 class ExceptionDecorator:
-    __default_exception = BrowserTimeoutError  # TODO it's something else, always triggers unexpected
+    __default_exception = BrowserTimeoutError
 
     def __init__(
             self,
@@ -32,17 +32,19 @@ class ExceptionDecorator:
             try:
                 obj_to_return = await func(*args, **kwargs)
                 return obj_to_return
-            except Exception as caughtException:  # TODO add .log file for errors
+            except Exception as caughtException:
                 if type(self.__exception) == type:
-                    if caughtException == self.__exception:
-                        print('expected', caughtException)
-                    else:
-                        print('unexpected', caughtException)
+                    if not type(caughtException) == self.__exception:
+                        from aiofiles import open
+
+                        async with open(f'.webdriver.log', 'w') as out:
+                            await out.write(f'unexpected error - {caughtException}')
                 else:
-                    if caughtException in self.__exception:
-                        print('expected', caughtException)
-                    else:
-                        print('unexpected', caughtException)
+                    if not type(caughtException) in self.__exception:
+                        from aiofiles import open
+
+                        async with open(f'.webdriver.log', 'w') as out:
+                            await out.write(f'unexpected error - {caughtException}')
 
         return wrapper
 
