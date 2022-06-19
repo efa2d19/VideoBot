@@ -120,12 +120,14 @@ class Wait:
 
 class RedditScreenshot(Browser, Wait):
     __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
+    __dark_mode_enabled = False
 
-    async def dark_theme(  # TODO
+    async def dark_theme(
             self,
             page_instance: Optional[PageCls] = None,
     ) -> None:
-        if self.__dark_mode == 'True':
+        if self.__dark_mode == 'True' and not self.__dark_mode_enabled:
+            self.__dark_mode_enabled = True
 
             await self.click(
                 page_instance, 

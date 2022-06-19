@@ -8,7 +8,7 @@ from src.api.reddit import reddit_setup
 from src.video.screenshots import RedditScreenshot
 from src.video.back.back_video import background_video
 
-from src.audio.tts.tts_wrapper import tts
+from src.audio.tts.tts_wrapper import TikTokTTS
 from src.audio.back.back_audio import background_audio
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
@@ -55,8 +55,8 @@ def cleanup(
     exit(exit_code)
 
 
-async def main():
-    print('started')  # TODO add progress bars in CLI
+async def collect_content(  # TODO add progress bars in CLI
+) -> int:
     async with ClientSession() as client:
         submission, comments, is_nsfw = await reddit_setup(client)
         if manual_mode:
@@ -76,9 +76,13 @@ async def main():
         start = datetime.now()
         async_tasks = list()
         screenshot = RedditScreenshot()
+        tts = TikTokTTS(client)
         async_browser = await screenshot.get_browser()
         async_tasks.append(
-            tts(client, submission.title, 'title')
+            tts(
+                submission.title,
+                'title'
+            )
         )
         async_tasks.append(
             screenshot(
@@ -89,24 +93,41 @@ async def main():
                 is_nsfw,
             )
         )
+
         for index, comment in enumerate(comments):
             async_tasks.append(
-                tts(client, comment.body, index)
+                tts(
+                    comment.body,
+                    index,
+                )
             )
 
-            async_tasks.append(
+        await asyncio.gather(*async_tasks)
+
+        async_tasks_secondary = list()
+
+        for index, comment in enumerate(comments):
+            async_tasks_secondary.append(
                 screenshot(
                     async_browser,
                     f'https://www.reddit.com{comment.permalink}',
                     comment.fullname,
                     index,
-                    is_nsfw
+                    is_nsfw,
                 )
             )
-        await asyncio.gather(*async_tasks)
+
+        await asyncio.gather(*async_tasks_secondary)
         await screenshot.close_browser(async_browser)
         end = datetime.now()
         print((end - start).total_seconds())
+        return comments.__len__()
+
+
+async def main():
+    print('started')  # TODO add progress bars in CLI
+
+    comments_len = await collect_content()
 
     print('collected')
 
@@ -131,7 +152,7 @@ async def main():
     audio_clip_list.append(audio_title)
     indexes_for_videos = list()
 
-    for audio in range(comments.__len__()):
+    for audio in range(comments_len):
         temp_audio_clip = create_audio_clip(
             audio,
             correct_audio_offset + video_duration,
