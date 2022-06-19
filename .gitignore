@@ -25,6 +25,9 @@ venv.bak/
 # MacOS files
 .DS_Store
 
+# Logs
+*.log
+
 # Temp files and results of script
 assets/*/*
 *.mp3

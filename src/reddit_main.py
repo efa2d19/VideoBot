@@ -1,15 +1,10 @@
-import asyncio
-from datetime import datetime
-
 from aiohttp import ClientSession
+from tqdm.asyncio import tqdm as async_tqdm
 
-from src.api.reddit import reddit_setup
+from tqdm import trange
 
-from src.video.screenshots import RedditScreenshot
-from src.video.back.back_video import background_video
-
-from src.audio.tts.tts_wrapper import TikTokTTS
-from src.audio.back.back_audio import background_audio
+from os import getenv
+from dotenv import load_dotenv
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from moviepy.video.fx.loop import loop
@@ -21,9 +16,13 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from os import getenv
+from src.api.reddit import reddit_setup
 
-from dotenv import load_dotenv
+from src.video.screenshots import RedditScreenshot
+from src.video.back.back_video import background_video
+
+from src.audio.tts.tts_wrapper import TikTokTTS
+from src.audio.back.back_audio import background_audio
 
 W, H = 1080, 1920
 
@@ -58,7 +57,8 @@ def cleanup(
 async def collect_content(  # TODO add progress bars in CLI
 ) -> int:
     async with ClientSession() as client:
-        submission, comments, is_nsfw = await reddit_setup(client)
+        reddit_results = await async_tqdm.gather(reddit_setup(client), desc='Gathering Reddit')
+        submission, comments, is_nsfw = reddit_results[0]
         if manual_mode:
             while True:
                 print(f'Is this submission ok? (y/n/e)\n{submission.title}')
@@ -73,7 +73,6 @@ async def collect_content(  # TODO add progress bars in CLI
                 else:
                     print('I don\'t understand you... Let\'s try again')
 
-        start = datetime.now()
         async_tasks = list()
         screenshot = RedditScreenshot()
         tts = TikTokTTS(client)
@@ -102,7 +101,7 @@ async def collect_content(  # TODO add progress bars in CLI
                 )
             )
 
-        await asyncio.gather(*async_tasks)
+        await async_tqdm.gather(*async_tasks, desc='Gathering TTS')
 
         async_tasks_secondary = list()
 
@@ -117,19 +116,13 @@ async def collect_content(  # TODO add progress bars in CLI
                 )
             )
 
-        await asyncio.gather(*async_tasks_secondary)
+        await async_tqdm.gather(*async_tasks_secondary, desc='Gathering screenshots')
         await screenshot.close_browser(async_browser)
-        end = datetime.now()
-        print((end - start).total_seconds())
         return comments.__len__()
 
 
 async def main():
-    print('started')  # TODO add progress bars in CLI
-
     comments_len = await collect_content()
-
-    print('collected')
 
     def create_audio_clip(
             clip_title: str | int,
@@ -152,7 +145,10 @@ async def main():
     audio_clip_list.append(audio_title)
     indexes_for_videos = list()
 
-    for audio in range(comments_len):
+    for audio in trange(
+            comments_len,
+            desc='Gathering audio clips'
+    ):
         temp_audio_clip = create_audio_clip(
             audio,
             correct_audio_offset + video_duration,
@@ -165,9 +161,17 @@ async def main():
 
     video_duration += delay_before_end
 
+    async_tasks_tertiary = list()
+
+    async_tasks_tertiary.append(background_video(video_duration))
+    if enable_background_audio == 'True':
+        async_tasks_tertiary.append(background_audio(video_duration))
+
+    await async_tqdm.gather(*async_tasks_tertiary, desc='Gathering back content')
+
     if enable_background_audio == 'True':
         back_audio = (
-            AudioFileClip(await background_audio(video_duration))
+            AudioFileClip('assets/audio/back.mp3')
             .set_start(0)
             .fx(audio_loop, duration=video_duration)
             .fx(audio_normalize)
@@ -212,7 +216,10 @@ async def main():
         )
     )
 
-    for photo in range(audio_clip_list.__len__() - index_offset):
+    for photo in trange(
+            audio_clip_list.__len__() - index_offset,
+            desc='Gathering photo clips'
+    ):
         photo_clip_list.append(
             create_image_clip(
                 indexes_for_videos[photo],
@@ -223,7 +230,7 @@ async def main():
         )
 
     back_video = (
-        VideoFileClip(await background_video(video_duration))
+        VideoFileClip('assets/video/back.mp4')
         .without_audio()
         .set_start(0)
         .fx(resize, height=H)
@@ -262,8 +269,6 @@ async def main():
 
     final_video = CompositeVideoClip(photo_clip_list)  # Merge all videos in one
     final_video.audio = final_audio  # Add audio clips to final video
-
-    print('writing')
 
     final_video.write_videofile(
         f'{final_video_name}.mp4',

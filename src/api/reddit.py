@@ -29,8 +29,16 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
     else:
         subreddit = await reddit.subreddit(subreddit)
 
+    submission_from_envs = getenv('submission')
+
     async def get_submission():
-        results = random.choice([i async for i in subreddit.hot(limit=50)])
+        if submission_from_envs:
+            if 'http' in submission_from_envs:
+                results = await reddit.submission(url=submission_from_envs)
+            else:
+                results = await reddit.submission(id=submission_from_envs)
+        else:
+            results = random.choice([i async for i in subreddit.hot(limit=50)])
         await results.load()
         return results
 
@@ -38,7 +46,7 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
     is_nsfw = False
     while True:
         submission = await get_submission()
-        if not allow_nsfw:
+        if not allow_nsfw and not submission_from_envs:
             if 'nsfw' in submission.whitelist_status:
                 continue
         else:
