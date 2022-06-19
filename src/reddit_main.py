@@ -21,8 +21,7 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from os import getenv, remove
-from glob import glob
+from os import getenv
 
 from dotenv import load_dotenv
 
@@ -43,6 +42,19 @@ enable_background_audio = getenv('enable_background_audio') if getenv('enable_ba
 manual_mode = getenv('manual_mode')
 
 
+def cleanup(
+        exit_code: int = 0
+) -> None:
+    from os import remove
+    from glob import glob
+
+    # Clean up
+    [remove(asset) for asset in glob('assets/*/*')]
+
+    # Exiting
+    exit(exit_code)
+
+
 async def main():
     print('started')  # TODO add progress bars in CLI
     async with ClientSession() as client:
@@ -51,15 +63,12 @@ async def main():
             while True:
                 print(f'Is this submission ok? (y/n/e)\n{submission.title}')
                 manual_confirmation = input()
-                if not all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation],
-                               [i for i in 'exit'])):
+                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'exit'])):
                     print('Exiting...')
-                    exit(1)
-                if not all(
-                        map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'no'])):
+                    cleanup(exit_code=1)
+                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'no'])):
                     await main()
-                if not all(
-                        map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
+                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
                     break
                 else:
                     print('I don\'t understand you... Let\'s try again')
@@ -242,8 +251,4 @@ async def main():
         audio_bitrate='192k',
     )
 
-    # Clean up
-    [remove(asset) for asset in glob('assets/*/*')]
-
-    # Exiting
-    exit(0)
+    cleanup()
