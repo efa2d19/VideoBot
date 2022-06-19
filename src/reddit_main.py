@@ -13,6 +13,8 @@ from src.audio.back.back_audio import background_audio
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from moviepy.video.fx.loop import loop
+from moviepy.video.fx.resize import resize
+from moviepy.video.fx.crop import crop
 
 from moviepy.editor import AudioFileClip, CompositeAudioClip
 from moviepy.audio.fx.audio_loop import audio_loop
@@ -161,8 +163,8 @@ async def main():
             .set_end(audio_end + time_before_tts)
             .set_duration(time_before_tts * 2 + audio_duration, change_end=False)
             .set_position('center')
-            .resize(width=W - 100)
             .set_opacity(opacity / 100)
+            .fx(resize, width=W - 100)
         )
 
     index_offset = 1
@@ -194,10 +196,34 @@ async def main():
         VideoFileClip(await background_video(video_duration))
         .without_audio()
         .set_start(0)
-        .resize(height=H, width=W)
-        .crop(x1=1166.6, y1=0, x2=2246.6, y2=1920)
+        .fx(resize, height=H)
         .fx(loop, duration=video_duration)
     )
+
+    back_video_width, back_video_height = back_video.size
+
+    # Fix to crop for vertical videos
+    if back_video_width < W:
+        back_video = (
+            back_video
+            .fx(resize, width=W)
+        )
+        back_video_width, back_video_height = back_video.size
+        back_video = back_video.fx(
+            crop,
+            x1=0,
+            x2=back_video_width,
+            y1=back_video_height / 2 - H / 2,
+            y2=back_video_height / 2 + H / 2
+        )
+    else:
+        back_video = back_video.fx(
+            crop,
+            x1=back_video_width / 2 - W / 2,
+            x2=back_video_width / 2 + W / 2,
+            y1=0,
+            y2=back_video_height
+        )
 
     photo_clip_list.insert(
         0,

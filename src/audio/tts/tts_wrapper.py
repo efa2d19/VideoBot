@@ -51,8 +51,9 @@ async def tts(
                     }) as result:
                 response = await result.json()
                 output_text += [response.get('data').get('v_str')][0]
-        if not output_text:  # TODO wrote blank file once, fixes, more test needed
+        if not output_text:  # TODO wrote blank file once, fixes, resend request doesn't help(
             print(f'no response - file {filename}.mp3')
+            print(req_text)
             await tts(
                 client,
                 req_text,
@@ -77,6 +78,7 @@ async def tts(
         output_text = [response.get('data').get('v_str')][0]
     if not output_text:  # TODO test it, failed once, wrote blank file
         print(f'no response - file {filename}.mp3')
+        print(req_text)
         await tts(
             client,
             req_text,

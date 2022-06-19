@@ -61,8 +61,6 @@ def catch_exception(
 # And to add it to other classes for other socials
 class Browser:
     default_Viewport = dict()
-    default_Viewport['width'] = 1920
-    default_Viewport['height'] = 1080
     default_Viewport['isLandscape'] = True
 
     async def get_browser(
@@ -80,6 +78,7 @@ class Browser:
 class Wait:
 
     @staticmethod
+    @catch_exception
     async def find_xpath(
             page_instance: PageCls,
             xpath: Optional[str] = None,
@@ -128,15 +127,10 @@ class RedditScreenshot(Browser, Wait):
     ) -> None:
         if self.__dark_mode == 'True':
 
-            user_settings = await self.find_xpath(
+            await self.click(
                 page_instance, 
                 '//*[contains(@class, \'header-user-dropdown\')]',
                 {'timeout': 5000},
-            )
-
-            await self.click(
-                page_instance,
-                el=user_settings
             )
 
             # It's normal not to find it, sometimes there is none :shrug:
@@ -155,7 +149,8 @@ class RedditScreenshot(Browser, Wait):
             # Closes settings
             await self.click(
                 page_instance,
-                el=user_settings
+                '//*[contains(@class, \'header-user-dropdown\')]',
+                {'timeout': 5000},
             )
 
     async def __call__(
@@ -171,7 +166,7 @@ class RedditScreenshot(Browser, Wait):
 
         await self.dark_theme(reddit_main)
 
-        if is_nsfw:
+        if is_nsfw:  # TODO test it, works bad, no elements
             await self.click(
                 reddit_main,
                 '//*[contains(text(), \'Click to see nsfw\')]',
