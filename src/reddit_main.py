@@ -55,24 +55,81 @@ def cleanup(
     exit(exit_code)
 
 
-async def collect_content(  # TODO add progress bars in CLI
+async def confirm_submission(
+        submission,
+) -> bool | None:
+    while True:
+        print(f'Is this submission ok? (y/n/e)\n{submission.title}')
+        print(f'Upvotes: {submission.score}, Comments: {submission.num_comments}')
+        print(submission.shortlink)
+        manual_confirmation = input()
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'exit'])):
+            print('Exiting...')
+            cleanup(exit_code=1)
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'no'])):
+            return None
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'yes'])):
+            return True
+        else:
+            print('I don\'t understand you... Let\'s try again')
+
+
+async def confirm_comments(
+        comments: list,
+) -> list:
+    confirmed_comments = list()
+    while True:
+        print(f'Wanna approve comments by hand? (y/n/e)')
+        comment_confirm = input()
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'exit'])):
+            print('Exiting...')
+            cleanup(exit_code=1)
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'no'])):
+            return comments
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'yes'])):
+            for comment in comments:
+                while True:
+                    print(f'Is this comment ok? (y/n/e)\n{comment.body}')
+                    print(f'Upvotes: {comment.score}, Awards: {comment.total_awards_received}')
+                    print(f'https://reddit.com{comment.permalink}')
+                    comment_approve = input()
+                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
+                               [i for i in 'exit'])):
+                        print('Exiting...')
+                        cleanup(exit_code=1)
+                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
+                               [i for i in 'no'])):
+                        print('Comment removed!')
+                        break
+                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
+                               [i for i in 'yes'])):
+                        confirmed_comments.append(comment)
+                        break
+                    else:
+                        print('I don\'t understand you... Let\'s try again')
+            return confirmed_comments
+
+        else:
+            print('I don\'t understand you... Let\'s try again')
+
+
+async def collect_reddit(
+        client: ClientSession,
+) -> tuple:
+    reddit_results = await async_tqdm.gather(reddit_setup(client), desc='Gathering Reddit')
+    submission, comments, is_nsfw = reddit_results[0]
+    if manual_mode:
+        submission_is_ok = await confirm_submission(submission)
+        if not submission_is_ok:
+            return await collect_reddit(client)
+        comments = await confirm_comments(comments)
+    return submission, comments, is_nsfw
+
+
+async def collect_content(
 ) -> int:
     async with ClientSession() as client:
-        reddit_results = await async_tqdm.gather(reddit_setup(client), desc='Gathering Reddit')
-        submission, comments, is_nsfw = reddit_results[0]
-        if manual_mode:
-            while True:
-                print(f'Is this submission ok? (y/n/e)\n{submission.title}')
-                manual_confirmation = input()
-                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'exit'])):
-                    print('Exiting...')
-                    cleanup(exit_code=1)
-                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'no'])):
-                    await main()
-                if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation], [i for i in 'yes'])):
-                    break
-                else:
-                    print('I don\'t understand you... Let\'s try again')
+        submission, comments, is_nsfw = await collect_reddit(client)
 
         async_tasks = list()
         screenshot = RedditScreenshot()
