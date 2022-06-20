@@ -53,7 +53,6 @@ class TikTokTTS:
     async def get_tts(
             self,
             text_to_tts: str,
-            filename: str,  # TODO remove after debug
     ) -> str:
         async with self.client.post(
                 url=self.uri_base,
@@ -64,12 +63,6 @@ class TikTokTTS:
                 }) as result:
             response = await result.json()
             output_text = [response.get('data').get('v_str')][0]
-
-        if not output_text:  # TODO wrote blank file once, fixes, resend request doesn't help
-            print(f'no response - file {filename}.mp3')
-            print('---------')
-            print(text_to_tts)
-            print('---------')
         return output_text
 
     @staticmethod
@@ -103,12 +96,12 @@ class TikTokTTS:
         if len(req_text) > 299:
             for part in self.text_len_sanitize(req_text, 299):
                 if part:
-                    output_text += await self.get_tts(part, filename)
+                    output_text += await self.get_tts(part)
 
             await self.decode_tts(output_text, filename)
             return
 
         # if under 299 characters do it in one
-        output_text = await self.get_tts(req_text, filename)
+        output_text = await self.get_tts(req_text)
 
         await self.decode_tts(output_text, filename)

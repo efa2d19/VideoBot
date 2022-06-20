@@ -1,11 +1,12 @@
 from pyppeteer import launch
 from pyppeteer.page import Page as PageCls
+from pyppeteer.element_handle import ElementHandle as ElementHandleCls
 from pyppeteer.browser import Browser as BrowserCls
 from pyppeteer.errors import TimeoutError as BrowserTimeoutError
 
 from os import getenv
 
-from typing import TypeVar, Optional, Union, Callable, Coroutine
+from typing import TypeVar, Optional, Union, Callable
 
 
 _function = TypeVar('_function', bound=Callable[..., object])
@@ -34,6 +35,7 @@ class ExceptionDecorator:
                 return obj_to_return
             except Exception as caughtException:
                 if type(self.__exception) == type:
+                    print(caughtException)  # TODO remove later
                     if not type(caughtException) == self.__exception:
                         from aiofiles import open
 
@@ -85,7 +87,7 @@ class Wait:
             page_instance: PageCls,
             xpath: Optional[str] = None,
             options: Optional[dict] = None,
-    ):
+    ) -> 'ElementHandleCls':
         if options:
             el = await page_instance.waitForXPath(xpath, options=options)
         else:
@@ -98,11 +100,15 @@ class Wait:
             page_instance: Optional[PageCls] = None,
             xpath: Optional[str] = None,
             find_options: Optional[dict] = None,
-            el: Optional[Coroutine] = None,
+            options: Optional[dict] = None,
+            el: Optional[ElementHandleCls] = None,
     ) -> None:
         if not el:
             el = await self.find_xpath(page_instance, xpath, find_options)
-        await el.click()
+        if options:
+            await el.click(options)
+        else:
+            await el.click()
 
     @catch_exception
     async def screenshot(
@@ -111,22 +117,24 @@ class Wait:
             xpath: Optional[str] = None,
             options: Optional[dict] = None,
             find_options: Optional[dict] = None,
-            el: Optional[Coroutine] = None,
+            el: Optional[ElementHandleCls] = None,
     ) -> None:
-        if options is None:
-            options = {}
         if not el:
             el = await self.find_xpath(page_instance, xpath, find_options)
-        await el.screenshot(options)
+        if options:
+            await el.screenshot(options)
+        else:
+            await el.screenshot()
 
 
 class RedditScreenshot(Browser, Wait):
     __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
     __dark_mode_enabled = False
+    __is_nsfw_enabled = False
 
     async def dark_theme(
             self,
-            page_instance: Optional[PageCls] = None,
+            page_instance: PageCls,
     ) -> None:
         if self.__dark_mode == 'True' and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
@@ -170,15 +178,17 @@ class RedditScreenshot(Browser, Wait):
 
         await self.dark_theme(reddit_main)
 
-        if is_nsfw:  # TODO test it, works bad, no elements
+        if is_nsfw and not self.__is_nsfw_enabled:
+            self.__is_nsfw_enabled = True
             await self.click(
                 reddit_main,
-                '//*[contains(text(), \'Click to see nsfw\')]',
+                '//button[contains(text(), \'Yes\')]',
                 {'timeout': 5000},
             )
+
             await self.click(
                 reddit_main,
-                '//*[contains(text(), \'Yes\')]',
+                '//button[contains(text(), \'nsfw\')]',
                 {'timeout': 5000},
             )
 
