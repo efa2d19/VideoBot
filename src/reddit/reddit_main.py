@@ -17,7 +17,8 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from src.api.reddit import reddit_setup
+from src.common import cleanup
+from src.reddit.collect_reddit import CollectReddit
 
 from src.video.screenshots import RedditScreenshot
 from src.video.back.back_video import background_video
@@ -37,99 +38,16 @@ time_between_pictures = float(getenv('time_between_pictures')) if getenv('time_b
 volume_of_background_music = int(getenv('volume_of_background_music')) if getenv('volume_of_background_music') else 15
 final_video_length = int(getenv('final_video_length')) if getenv('final_video_length') else 60
 delay_before_end = int(getenv('delay_before_end')) if getenv('delay_before_end') else 1
-final_video_name = getenv("final_video_name") if getenv("final_video_name") else "final_video"
+final_video_name = getenv("final_video_name")
 enable_background_audio = getenv('enable_background_audio') if getenv('enable_background_audio') else 'True'
 manual_mode = getenv('manual_mode')
-
-
-def cleanup(
-        exit_code: int = 0
-) -> None:
-    from os import remove
-    from glob import glob
-
-    # Clean up
-    [remove(asset) for asset in glob('assets/*/*')]
-
-    # Exiting
-    exit(exit_code)
-
-
-async def confirm_submission(
-        submission,
-) -> bool | None:
-    while True:
-        print(f'Is this submission ok? (y/n/e)\n{submission.title}')
-        print(f'Upvotes: {submission.score}, Comments: {submission.num_comments}')
-        print(submission.shortlink)
-        manual_confirmation = input()
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'exit'])):
-            print('Exiting...')
-            cleanup(exit_code=1)
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'no'])):
-            return None
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'yes'])):
-            return True
-        else:
-            print('I don\'t understand you... Let\'s try again')
-
-
-async def confirm_comments(
-        comments: list,
-) -> list:
-    confirmed_comments = list()
-    while True:
-        print(f'Wanna approve comments by hand? (y/n/e)')
-        comment_confirm = input()
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'exit'])):
-            print('Exiting...')
-            cleanup(exit_code=1)
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'no'])):
-            return comments
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'yes'])):
-            for comment in comments:
-                while True:
-                    print(f'Is this comment ok? (y/n/e)\n{comment.body}')
-                    print(f'Upvotes: {comment.score}, Awards: {comment.total_awards_received}')
-                    print(f'https://reddit.com{comment.permalink}')
-                    comment_approve = input()
-                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                               [i for i in 'exit'])):
-                        print('Exiting...')
-                        cleanup(exit_code=1)
-                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                               [i for i in 'no'])):
-                        print('Comment removed!')
-                        break
-                    if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                               [i for i in 'yes'])):
-                        confirmed_comments.append(comment)
-                        break
-                    else:
-                        print('I don\'t understand you... Let\'s try again')
-            return confirmed_comments
-
-        else:
-            print('I don\'t understand you... Let\'s try again')
-
-
-async def collect_reddit(
-        client: ClientSession,
-) -> tuple:
-    reddit_results = await async_tqdm.gather(reddit_setup(client), desc='Gathering Reddit')
-    submission, comments, is_nsfw = reddit_results[0]
-    if manual_mode:
-        submission_is_ok = await confirm_submission(submission)
-        if not submission_is_ok:
-            return await collect_reddit(client)
-        comments = await confirm_comments(comments)
-    return submission, comments, is_nsfw
 
 
 async def collect_content(
 ) -> int:
     async with ClientSession() as client:
-        submission, comments, is_nsfw = await collect_reddit(client)
+        reddit_instance = CollectReddit(client)
+        submission, comments, is_nsfw = await reddit_instance()
 
         async_tasks = list()
         screenshot = RedditScreenshot()
@@ -159,7 +77,11 @@ async def collect_content(
                 )
             )
 
-        await async_tqdm.gather(*async_tasks, desc='Gathering TTS')
+        await async_tqdm.gather(
+            *async_tasks,
+            desc='Gathering TTS',
+            leave=False,
+        )
 
         async_tasks_secondary = list()
 
@@ -174,7 +96,11 @@ async def collect_content(
                 )
             )
 
-        await async_tqdm.gather(*async_tasks_secondary, desc='Gathering screenshots')
+        await async_tqdm.gather(
+            *async_tasks_secondary,
+            desc='Gathering screenshots',
+            leave=False,
+        )
         await screenshot.close_browser(async_browser)
         return comments.__len__()
 
@@ -205,7 +131,8 @@ async def main():
 
     for audio in trange(
             comments_len,
-            desc='Gathering audio clips'
+            desc='Gathering audio clips',
+            leave=False,
     ):
         temp_audio_clip = create_audio_clip(
             audio,
@@ -225,7 +152,11 @@ async def main():
     if enable_background_audio == 'True':
         async_tasks_tertiary.append(background_audio(video_duration))
 
-    await async_tqdm.gather(*async_tasks_tertiary, desc='Gathering back content')
+    await async_tqdm.gather(
+        *async_tasks_tertiary,
+        desc='Gathering back content',
+        leave=False,
+    )
 
     if enable_background_audio == 'True':
         back_audio = (
@@ -276,7 +207,8 @@ async def main():
 
     for photo in trange(
             audio_clip_list.__len__() - index_offset,
-            desc='Gathering photo clips'
+            desc='Gathering photo clips',
+            leave=False,
     ):
         photo_clip_list.append(
             create_image_clip(

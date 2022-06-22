@@ -35,7 +35,6 @@ class ExceptionDecorator:
                 return obj_to_return
             except Exception as caughtException:
                 if type(self.__exception) == type:
-                    print(caughtException)  # TODO remove later
                     if not type(caughtException) == self.__exception:
                         from aiofiles import open
 
