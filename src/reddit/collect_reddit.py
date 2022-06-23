@@ -129,6 +129,7 @@ class CollectReddit:
                             confirmed_comments.append(comment)
                             self.console.print('[green]Comment approved![/green]', end='\n\n')
                             break
+                self.console.clear()
                 return confirmed_comments
             self.console.clear()
             return
@@ -138,17 +139,12 @@ class CollectReddit:
     ) -> int:
         await self.collect_reddit()
 
-        async_tasks = list()
+        async_tasks_primary = list()
         screenshot = RedditScreenshot()
         tts = TikTokTTS(self.client)
         async_browser = await screenshot.get_browser()
-        async_tasks.append(
-            tts(
-                self.submission.title,
-                'title'
-            )
-        )
-        async_tasks.append(
+        # It's a crutch to enable dark_mode or accept nsfw once
+        async_tasks_primary.append(
             screenshot(
                 async_browser,
                 f'https://www.reddit.com{self.submission.permalink}',
@@ -157,9 +153,15 @@ class CollectReddit:
                 self.is_nsfw,
             )
         )
+        async_tasks_primary.append(
+            tts(
+                self.submission.title,
+                'title'
+            )
+        )
 
         for index, comment in enumerate(self.comments):
-            async_tasks.append(
+            async_tasks_primary.append(
                 tts(
                     comment.body,
                     index,
@@ -167,9 +169,11 @@ class CollectReddit:
             )
 
         await async_tqdm.gather(
-            *async_tasks,
+            *async_tasks_primary,
             desc='Gathering TTS',
             leave=False,
+            # Crutch for screenshot with title
+            total=async_tasks_primary.__len__() - 1,
         )
 
         async_tasks_secondary = list()
@@ -189,6 +193,8 @@ class CollectReddit:
             *async_tasks_secondary,
             desc='Gathering screenshots',
             leave=False,
+            # Crutch for screenshot with title
+            total=async_tasks_secondary.__len__() + 1,
         )
         await screenshot.close_browser(async_browser)
         return self.comments.__len__()

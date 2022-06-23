@@ -100,14 +100,14 @@ class Reddit:
 
         video_duration += self.delay_before_end
 
-        async_tasks_tertiary = list()
+        async_tasks = list()
 
-        async_tasks_tertiary.append(background_video(video_duration))
+        async_tasks.append(background_video(video_duration))
         if self.enable_background_audio == 'True':
-            async_tasks_tertiary.append(background_audio(video_duration))
+            async_tasks.append(background_audio(video_duration))
 
         await async_tqdm.gather(
-            *async_tasks_tertiary,
+            *async_tasks,
             desc='Gathering back content',
             leave=False,
         )
@@ -206,5 +206,7 @@ class Reddit:
             verbose=False,
             logger=TqdmProgressBarLogger(print_messages=False)
         )
+
+        reddit_instance.console.print(f'Your video is ready:\n[cyan]{self.final_video_name}.mp4[/cyan]')
 
         cleanup()
