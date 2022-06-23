@@ -1,7 +1,6 @@
 from aiohttp import ClientSession
 from tqdm.asyncio import tqdm as async_tqdm
 
-
 import attr
 from os import getenv
 from dotenv import load_dotenv
@@ -21,10 +20,9 @@ manual_mode = getenv('manual_mode')
 @attr.s(auto_attribs=True)
 class CollectReddit:
     client: ClientSession
-    console = Console(style='yellow')
-    confirmed_comments = list()
-    submission_is_ok = None
-    options = ['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]']
+    options: list[str] = ['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]']
+    console_options: dict = {'style': 'yellow'}
+    console: Console = Console(**console_options)
 
     async def __call__(
             self,
@@ -36,18 +34,11 @@ class CollectReddit:
         )
         self.submission, self.comments, self.is_nsfw = reddit_results[0]
         if manual_mode:
-            await self.confirm_submission()
-            if not self.submission_is_ok:
+            if not await self.confirm_submission():
                 return await self.__call__()
-            await self.confirm_comments()
-            if self.confirmed_comments:
-                self.comments = self.confirmed_comments
+            confirmed_comments = await self.confirm_comments()
+            self.comments = confirmed_comments if confirmed_comments else self.comments
         return self.submission, self.comments, self.is_nsfw
-
-    def input_options(
-            self
-    ) -> None:
-        self.console.print(Columns(self.options, equal=True, padding=(0, 3)))
 
     def column_from_obj(
             self,
@@ -55,9 +46,33 @@ class CollectReddit:
     ) -> None:
         self.console.print(Columns(obj, equal=True, padding=(0, 3)))
 
+    def input_validation(
+            self,
+    ):
+        while True:
+            self.column_from_obj(self.options)
+
+            received = input()
+
+            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i], [i for i in 'exit'])):
+                self.console.clear()
+                self.console.print('[red]Exiting...[/red]')
+                cleanup(exit_code=1)
+            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
+                       [i for i in 'no'])):
+                self.console.clear()
+                return False
+            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
+                       [i for i in 'yes'])):
+                self.console.clear()
+                return True
+            else:
+                self.console.clear()
+                self.console.print('[red]I don\'t understand you... Let\'s try again[/red]', end='\n\n')
+
     async def confirm_submission(
             self,
-    ) -> None:
+    ) -> bool:
         while True:
             self.console.print(
                 'Use this submission?',
@@ -72,41 +87,18 @@ class CollectReddit:
                     f'Comments: [cyan]{self.submission.num_comments}[/cyan]',
                 ]
             )
-            self.input_options()
-            manual_confirmation = input()
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i],
-                       [i for i in 'exit'])):
-                self.console.clear()
-                self.console.print('[red]Exiting...[/red]')
-                cleanup(exit_code=1)
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'no'])):
-                self.console.clear()
-                break
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in manual_confirmation if i], [i for i in 'yes'])):
-                self.console.clear()
-                self.submission_is_ok = True
-                break
-            else:
-                self.console.clear()
-                self.console.print('[red]I don\'t understand you... Let\'s try again[/red]', end='\n\n')
+
+            return True if self.input_validation() else False
 
     async def confirm_comments(
             self,
-    ) -> None:
+    ) -> list | None:
         while True:
             self.console.print('Wanna approve comments by hand?', end='\n\n')
-            self.input_options()
 
-            comment_confirm = input()
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'exit'])):
-                self.console.clear()
-                self.console.print('[red]Exiting...[/red]')
-                cleanup(exit_code=1)
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'no'])):
-                self.console.clear()
-                break
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_confirm if i], [i for i in 'yes'])):
-                self.console.clear()
+            if self.input_validation():
+                confirmed_comments = list()
+
                 for comment in self.comments:
                     while True:
                         self.console.print(
@@ -124,29 +116,11 @@ class CollectReddit:
                                 f'Awards: [cyan]{comment.total_awards_received}[/cyan]',
                             ]
                         )
-                        self.input_options()
-                        comment_approve = input()
-
-                        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                                   [i for i in 'exit'])):
-                            self.console.clear()
-                            self.console.print('[red]Exiting...[/red]')
-                            cleanup(exit_code=1)
-                        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                                   [i for i in 'no'])):
-                            self.console.clear()
+                        if not self.input_validation():
                             self.console.print('[magenta]Comment removed![/magenta]', end='\n\n')
                             break
-                        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in comment_approve if i],
-                                   [i for i in 'yes'])):
-                            self.console.clear()
-                            self.confirmed_comments.append(comment)
-                            break
                         else:
-                            self.console.clear()
-                            self.console.print('I don\'t understand you... Let\'s try again', end='\n\n')
-                self.console.clear()
-                break
-            else:
-                self.console.clear()
-                self.console.print('I don\'t understand you... Let\'s try again', end='\n\n')
+                            confirmed_comments.append(comment)
+                            self.console.print('[green]Comment approved![/green]', end='\n\n')
+                            break
+                return confirmed_comments
