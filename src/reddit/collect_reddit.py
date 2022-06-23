@@ -8,6 +8,9 @@ from dotenv import load_dotenv
 from rich.console import Console
 from rich.columns import Columns
 
+from src.video.screenshots import RedditScreenshot
+from src.audio.tts.tts_wrapper import TikTokTTS
+
 from src.api.reddit import reddit_setup
 from src.common import cleanup
 
@@ -17,16 +20,21 @@ load_dotenv()
 manual_mode = getenv('manual_mode')
 
 
-@attr.s(auto_attribs=True)
 class CollectReddit:
-    client: ClientSession
-    options: list[str] = ['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]']
-    console_options: dict = {'style': 'yellow'}
-    console: Console = Console(**console_options)
-
-    async def __call__(
+    def __init__(
             self,
+            client: ClientSession,
+            options: dict | None = None,
+            console: Console = Console(style='yellow')
     ):
+        if options is None:
+            options = ['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]']
+        self.client = client
+        self.options = options
+        self.console = console
+        self.submission, self.comments, self.is_nsfw = None, None, None
+
+    async def collect_reddit(self):
         reddit_results = await async_tqdm.gather(
             reddit_setup(self.client),
             desc='Gathering Reddit',
@@ -35,10 +43,9 @@ class CollectReddit:
         self.submission, self.comments, self.is_nsfw = reddit_results[0]
         if manual_mode:
             if not await self.confirm_submission():
-                return await self.__call__()
+                return await self.collect_reddit()
             confirmed_comments = await self.confirm_comments()
             self.comments = confirmed_comments if confirmed_comments else self.comments
-        return self.submission, self.comments, self.is_nsfw
 
     def column_from_obj(
             self,
@@ -49,26 +56,25 @@ class CollectReddit:
     def input_validation(
             self,
     ):
-        while True:
-            self.column_from_obj(self.options)
+        self.column_from_obj(self.options)
 
-            received = input()
+        received = input()
 
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i], [i for i in 'exit'])):
-                self.console.clear()
-                self.console.print('[red]Exiting...[/red]')
-                cleanup(exit_code=1)
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
-                       [i for i in 'no'])):
-                self.console.clear()
-                return False
-            if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
-                       [i for i in 'yes'])):
-                self.console.clear()
-                return True
-            else:
-                self.console.clear()
-                self.console.print('[red]I don\'t understand you... Let\'s try again[/red]', end='\n\n')
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i], [i for i in 'exit'])):
+            self.console.clear()
+            self.console.print('[red]Exiting...[/red]')
+            cleanup(exit_code=1)
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
+                   [i for i in 'no'])):
+            self.console.clear()
+            return False
+        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
+                   [i for i in 'yes'])):
+            self.console.clear()
+            return True
+        else:
+            self.console.clear()
+            self.console.print('[red]I don\'t understand you... Let\'s try again[/red]', end='\n\n')
 
     async def confirm_submission(
             self,
@@ -124,3 +130,65 @@ class CollectReddit:
                             self.console.print('[green]Comment approved![/green]', end='\n\n')
                             break
                 return confirmed_comments
+            self.console.clear()
+            return
+
+    async def collect_content(
+            self,
+    ) -> int:
+        await self.collect_reddit()
+
+        async_tasks = list()
+        screenshot = RedditScreenshot()
+        tts = TikTokTTS(self.client)
+        async_browser = await screenshot.get_browser()
+        async_tasks.append(
+            tts(
+                self.submission.title,
+                'title'
+            )
+        )
+        async_tasks.append(
+            screenshot(
+                async_browser,
+                f'https://www.reddit.com{self.submission.permalink}',
+                self.submission.fullname,
+                'title',
+                self.is_nsfw,
+            )
+        )
+
+        for index, comment in enumerate(self.comments):
+            async_tasks.append(
+                tts(
+                    comment.body,
+                    index,
+                )
+            )
+
+        await async_tqdm.gather(
+            *async_tasks,
+            desc='Gathering TTS',
+            leave=False,
+        )
+
+        async_tasks_secondary = list()
+
+        for index, comment in enumerate(self.comments):
+            async_tasks_secondary.append(
+                screenshot(
+                    async_browser,
+                    f'https://www.reddit.com{comment.permalink}',
+                    comment.fullname,
+                    index,
+                    self.is_nsfw,
+                )
+            )
+
+        await async_tqdm.gather(
+            *async_tasks_secondary,
+            desc='Gathering screenshots',
+            leave=False,
+        )
+        await screenshot.close_browser(async_browser)
+        return self.comments.__len__()
