@@ -17,7 +17,7 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from src.common import cleanup
+from src.common import cleanup, name_normalize
 from src.reddit.collect_reddit import CollectReddit
 from src.video.back.back_video import background_video
 from src.audio.back.back_audio import background_audio
@@ -35,7 +35,7 @@ class Reddit:
         'volume_of_background_music') else 15
     final_video_length = int(getenv('final_video_length')) if getenv('final_video_length') else 60
     delay_before_end = int(getenv('delay_before_end')) if getenv('delay_before_end') else 1
-    final_video_name = getenv("final_video_name") if getenv("final_video_name") else 'final_video'
+    final_video_name = getenv("final_video_name")
     enable_background_audio = getenv('enable_background_audio') if getenv('enable_background_audio') else 'True'
     width = int(getenv('video_width')) if getenv('video_width') else 1080
     height = int(getenv('video_height')) if getenv('video_height') else 1920
@@ -61,6 +61,11 @@ class Reddit:
         async with ClientSession() as client:
             reddit_instance = CollectReddit(client)
             comments_len = await reddit_instance.collect_content()
+
+            if not self.final_video_name:
+                self.final_video_name = name_normalize(reddit_instance.submission.title)
+            else:
+                self.final_video_name = name_normalize(self.final_video_name)
 
         def create_audio_clip(
                 clip_title: str | int,

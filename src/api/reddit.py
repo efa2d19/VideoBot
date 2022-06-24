@@ -53,6 +53,7 @@ async def reddit_setup(client: 'ClientSession') -> tuple:
             is_nsfw = 'nsfw' in submission.whitelist_status
             break
 
+    # TODO add min max comment lenght
     number_of_comments = int(getenv('number_of_comments', 15)) if getenv('number_of_comments', 15) else 15
     top_level_comments = list(submission.comments)[:number_of_comments]
     return submission, top_level_comments, is_nsfw
