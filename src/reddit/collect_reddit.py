@@ -1,9 +1,10 @@
 from aiohttp import ClientSession
 from tqdm.asyncio import tqdm as async_tqdm
 
-import attr
 from os import getenv
 from dotenv import load_dotenv
+from attr import attrs, attrib
+from attr.validators import instance_of
 
 from rich.console import Console
 from rich.columns import Columns
@@ -11,37 +12,32 @@ from rich.columns import Columns
 from src.video.screenshots import RedditScreenshot
 from src.audio.tts.tts_wrapper import TikTokTTS
 
-from src.api.reddit import reddit_setup
-from src.common import cleanup
+from src.api.reddit import RedditAPI
+from src.common import cleanup, str_to_bool
 
 
 load_dotenv()
 
-manual_mode = getenv('manual_mode')
 
-
+@attrs
 class CollectReddit:
-    def __init__(
-            self,
-            client: ClientSession,
-            options: dict | None = None,
-            console: Console = Console(style='yellow')
-    ):
-        if options is None:
-            options = ['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]']
-        self.client = client
-        self.options = options
-        self.console = console
-        self.submission, self.comments, self.is_nsfw = None, None, None
+    client: ClientSession = attrib()
+    options: list[str] = attrib(validator=instance_of(list),
+                                default=['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]'])
+    console: Console = attrib(validator=instance_of(Console),
+                              default=Console(style='yellow'))
+    manual_mode: bool = attrib(validator=instance_of(bool),
+                               default=str_to_bool(getenv('manual_mode', 'True')))
+    submission, comments, is_nsfw = attrib(default=None), attrib(default=None), attrib(default=None)
 
     async def collect_reddit(self):
         reddit_results = await async_tqdm.gather(
-            reddit_setup(self.client),
+            RedditAPI(self.client, self.console).reddit_setup(),
             desc='Gathering Reddit',
             leave=False,
         )
         self.submission, self.comments, self.is_nsfw = reddit_results[0]
-        if manual_mode:
+        if self.manual_mode:
             if not await self.confirm_submission():
                 return await self.collect_reddit()
             confirmed_comments = await self.confirm_comments()

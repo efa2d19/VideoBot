@@ -1,59 +1,94 @@
-from aiohttp import ClientSession
 import asyncpraw
+from aiohttp import ClientSession
 
 import random
 from os import getenv
+from dotenv import load_dotenv
+
+from rich.console import Console
+
+from attr import attrs, attrib
+from attrs.validators import instance_of
+
+from src.common import str_to_bool
+
+load_dotenv()
 
 
-async def reddit_setup(client: 'ClientSession') -> tuple:
-    default_useragent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' \
-                        '(KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36'
+@attrs
+class RedditAPI:
+    client: ClientSession = attrib()
+    console: Console = attrib(validator=instance_of(Console))
+    default_useragent: str = attrib(validator=instance_of(str),
+                                    default='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                                            '(KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36')
 
-    client_id = getenv('CLIENT_ID')
-    client_secret = getenv('CLIENT_SECRET')
-
+    client_id: str = attrib(validator=instance_of(str),
+                            default=getenv('CLIENT_ID'))
+    client_secret: str = attrib(validator=instance_of(str),
+                                default=getenv('CLIENT_SECRET'))
+    submission_from_envs: str = attrib(validator=instance_of(str),
+                                       default=getenv('submission'))
+    allow_nsfw: bool = attrib(validator=instance_of(bool),
+                              default=str_to_bool(getenv('allow_nsfw')) if getenv('allow_nsfw') else True)
+    subreddit: str = attrib(validator=instance_of(str),
+                            default=getenv('subreddit'))
+    number_of_comments: int = attrib(validator=instance_of(int), converter=int,
+                                     default=getenv('number_of_comments'))
+    min_comment_lenght: int = attrib(validator=instance_of(int), converter=int,
+                                     default=getenv('min_comment_lenght'))
+    max_comment_lenght: int = attrib(validator=instance_of(int), converter=int,
+                                     default=getenv('max_comment_lenght'))
     if not client_id or not client_secret:
         raise ValueError('Check .env file, client_id or client_secret is not set')
 
-    reddit = asyncpraw.Reddit(
-        client_id=client_id,
-        client_secret=client_secret,
-        user_agent=default_useragent,
-        requestor_kwargs={'session': client},
-    )
-    reddit.read_only = True
+    def __attrs_post_init__(self):
+        self.reddit = asyncpraw.Reddit(
+            client_id=self.client_id,
+            client_secret=self.client_secret,
+            user_agent=self.default_useragent,
+            requestor_kwargs={'session': self.client},
+        )
+        self.reddit.read_only = True
 
-    subreddit = getenv('subreddit')
-    if not subreddit or subreddit == 'random':  # TODO add check for comments w/ pictures
-        subreddit = await reddit.random_subreddit()
-    else:
-        subreddit = await reddit.subreddit(subreddit)
-
-    submission_from_envs = getenv('submission')
-
-    async def get_submission():
-        if submission_from_envs:
-            if 'http' in submission_from_envs:
-                results = await reddit.submission(url=submission_from_envs)
+    async def get_submission(
+            self,
+            subreddit: asyncpraw.models.Subreddit,
+    ):
+        if self.submission_from_envs:
+            if 'http' in self.submission_from_envs:
+                results = await self.reddit.submission(url=self.submission_from_envs)
             else:
-                results = await reddit.submission(id=submission_from_envs)
+                results = await self.reddit.submission(id=self.submission_from_envs)
         else:
+            # TODO add top/hot selector in envs
+            #  'time_filter: Can be one of: all, day, hour, month, week, year (default: all).'
             results = random.choice([i async for i in subreddit.hot(limit=50)])
         await results.load()
         return results
 
-    allow_nsfw = getenv('allow_nsfw', 'True') == 'True'
-    is_nsfw = False
-    while True:
-        submission = await get_submission()
-        if not allow_nsfw and not submission_from_envs:
-            if 'nsfw' in submission.whitelist_status:
-                continue
+    async def reddit_setup(
+            self,
+    ) -> tuple:
+        if not self.subreddit or self.subreddit == 'random':  # TODO add check for comments w/ pictures
+            subreddit = await self.reddit.random_subreddit()
         else:
-            is_nsfw = 'nsfw' in submission.whitelist_status
-            break
+            subreddit = await self.reddit.subreddit(self.subreddit)
 
-    # TODO add min max comment lenght
-    number_of_comments = int(getenv('number_of_comments', 15)) if getenv('number_of_comments', 15) else 15
-    top_level_comments = list(submission.comments)[:number_of_comments]
-    return submission, top_level_comments, is_nsfw
+        is_nsfw = False
+        while True:
+            submission = await self.get_submission(subreddit)
+            if not self.allow_nsfw and not self.submission_from_envs:
+                if 'nsfw' in submission.whitelist_status:
+                    self.console.print('[magenta]Submission is NSFW.[/magenta]')
+                    self.console.print('Skipping...')
+                    continue
+            else:
+                is_nsfw = 'nsfw' in submission.whitelist_status
+                break
+
+        top_level_comments = [comment for comment in submission.comments if
+                              self.max_comment_lenght >= getattr(comment, 'body',
+                                                                 '').__len__() >= self.min_comment_lenght][
+                             :self.number_of_comments]
+        return submission, top_level_comments, is_nsfw

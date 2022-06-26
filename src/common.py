@@ -23,3 +23,12 @@ def name_normalize(
     name = sub(r'(\w+)\s?\/\s?(\w+)', r'\1 or \2', name)
     name = sub(r'\/', r'', name)
     return name
+
+
+def str_to_bool(s):
+    if s in ['True', 'true']:
+        return True
+    elif s in ['False', 'false']:
+        return False
+    else:
+        raise ValueError('Can\'t convert to bool:', s)

@@ -6,6 +6,8 @@ from proglog import TqdmProgressBarLogger
 
 from os import getenv
 from dotenv import load_dotenv
+from attr import attrs, attrib
+from attr.validators import instance_of
 
 from moviepy.editor import VideoFileClip, ImageClip, CompositeVideoClip
 from moviepy.video.fx.loop import loop
@@ -17,28 +19,40 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from src.common import cleanup, name_normalize
+from src.common import cleanup, name_normalize, str_to_bool
 from src.reddit.collect_reddit import CollectReddit
 from src.video.back.back_video import background_video
 from src.audio.back.back_audio import background_audio
 
+
 load_dotenv()
 
 
+@attrs
 class Reddit:
     # Settings w/ checks for incorrect envs
-    opacity = int(getenv('opacity')) if getenv('opacity') else 95
-    time_before_first_picture = float(getenv('time_before_first_picture')) if getenv('time_before_first_picture') else 1
-    time_before_tts = float(getenv('time_before_tts')) if getenv('time_before_tts') else 0.5
-    time_between_pictures = float(getenv('time_between_pictures')) if getenv('time_between_pictures') else 1
-    volume_of_background_music = int(getenv('volume_of_background_music')) if getenv(
-        'volume_of_background_music') else 15
-    final_video_length = int(getenv('final_video_length')) if getenv('final_video_length') else 60
-    delay_before_end = int(getenv('delay_before_end')) if getenv('delay_before_end') else 1
-    final_video_name = getenv("final_video_name")
-    enable_background_audio = getenv('enable_background_audio') if getenv('enable_background_audio') else 'True'
-    width = int(getenv('video_width')) if getenv('video_width') else 1080
-    height = int(getenv('video_height')) if getenv('video_height') else 1920
+    opacity: int = attrib(converter=int, validator=instance_of(int),
+                          default=getenv('opacity', 95))
+    time_before_first_picture: float = attrib(converter=float, validator=instance_of((float, int)),
+                                              default=getenv('time_before_first_picture', 1))
+    time_before_tts: float = attrib(converter=float, validator=instance_of((float, int)),
+                                    default=getenv('time_before_tts', 0.5))
+    time_between_pictures: float = attrib(converter=float, validator=instance_of((float, int)),
+                                          default=getenv('time_between_pictures', 1))
+    volume_of_background_music: int = attrib(converter=int, validator=instance_of(int),
+                                             default=getenv('volume_of_background_music', 15))
+    final_video_length: int = attrib(converter=int, validator=instance_of(int),
+                                     default=getenv('final_video_length', 60))
+    delay_before_end: int = attrib(converter=int, validator=instance_of(int),
+                                   default=getenv('delay_before_end', 1))
+    final_video_name: str | None = attrib(validator=instance_of((str, None)),
+                                          default=getenv('final_video_name'))
+    enable_background_audio: bool = attrib(validator=instance_of(bool),
+                                           default=str_to_bool(getenv('enable_background_audio', 'True')))
+    width: int = attrib(converter=int, validator=instance_of(int),
+                        default=getenv('video_width', 1080))
+    height: int = attrib(converter=int, validator=instance_of(int),
+                         default=getenv('video_height', 1920))
 
     def create_image_clip(
             self,
