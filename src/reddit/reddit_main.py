@@ -32,27 +32,27 @@ load_dotenv()
 class Reddit:
     # Settings w/ checks for incorrect envs
     opacity: int = attrib(converter=int, validator=instance_of(int),
-                          default=getenv('opacity', 95))
+                          default=getenv('OPACITY', 95))
     time_before_first_picture: float = attrib(converter=float, validator=instance_of((float, int)),
-                                              default=getenv('time_before_first_picture', 1))
+                                              default=getenv('TIME_BEFORE_FIRST', 1))
     time_before_tts: float = attrib(converter=float, validator=instance_of((float, int)),
-                                    default=getenv('time_before_tts', 0.5))
+                                    default=getenv('TIME_BEFORE_TTS', 0.5))
     time_between_pictures: float = attrib(converter=float, validator=instance_of((float, int)),
-                                          default=getenv('time_between_pictures', 1))
+                                          default=getenv('TIME_BETWEEN_PICTURES', 1))
     volume_of_background_music: int = attrib(converter=int, validator=instance_of(int),
-                                             default=getenv('volume_of_background_music', 15))
+                                             default=getenv('BACK_MUSIC_VOLUME', 15))
     final_video_length: int = attrib(converter=int, validator=instance_of(int),
-                                     default=getenv('final_video_length', 60))
+                                     default=getenv('FINAL_VIDEO_LENGTH', 60))
     delay_before_end: int = attrib(converter=int, validator=instance_of(int),
-                                   default=getenv('delay_before_end', 1))
+                                   default=getenv('DELAY_BEFORE_END', 1))
     final_video_name: str | None = attrib(validator=instance_of((str, None)),
-                                          default=getenv('final_video_name'))
+                                          default=getenv('FINAL_VIDEO_NAME'))
     enable_background_audio: bool = attrib(validator=instance_of(bool),
-                                           default=str_to_bool(getenv('enable_background_audio', 'True')))
+                                           default=str_to_bool(getenv('ENABLE_BACK_AUDIO', 'True')))
     width: int = attrib(converter=int, validator=instance_of(int),
-                        default=getenv('video_width', 1080))
+                        default=getenv('VIDEO_WIDTH', 1080))
     height: int = attrib(converter=int, validator=instance_of(int),
-                         default=getenv('video_height', 1920))
+                         default=getenv('VIDEO_HEIGHT', 1920))
 
     def create_image_clip(
             self,

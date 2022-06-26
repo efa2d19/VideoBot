@@ -3,31 +3,32 @@ from pyppeteer.page import Page as PageCls
 from pyppeteer.element_handle import ElementHandle as ElementHandleCls
 from pyppeteer.browser import Browser as BrowserCls
 from pyppeteer.errors import TimeoutError as BrowserTimeoutError
+from pyppeteer.errors import PyppeteerError
 
 from os import getenv
+from attr import attrs, attrib
+from attr.validators import instance_of, optional
+
+from src.common import str_to_bool
 
 from typing import TypeVar, Optional, Union, Callable
-
 
 _function = TypeVar('_function', bound=Callable[..., object])
 _exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
 
 
+@attrs
 class ExceptionDecorator:
-    __default_exception = BrowserTimeoutError
+    __exception: Optional[_exceptions] = attrib(validator=optional(instance_of(_exceptions)), default=None),
+    __default_exception = attrib(validator=optional(instance_of(PyppeteerError)), default=BrowserTimeoutError)
 
-    def __init__(
-            self,
-            exception: Optional[_exceptions] = None,
-    ):
-        if exception:
-            self.__exception = exception
-        else:
+    def __attrs_post_init__(self):
+        if not self.__exception:
             self.__exception = self.__default_exception
 
     def __call__(
             self,
-            func,
+            func: _function,
     ):
         async def wrapper(*args, **kwargs):
             try:
@@ -54,7 +55,7 @@ def catch_exception(
         func: Optional[_function],
         exception: Optional[_exceptions] = None,
 ) -> ExceptionDecorator | _function:
-    exceptor = ExceptionDecorator(exception=exception)
+    exceptor = ExceptionDecorator(exception)
     if func:
         exceptor = exceptor(func)
     return exceptor
@@ -62,9 +63,13 @@ def catch_exception(
 
 # It exists, so I can import everything at once
 # And to add it to other classes for other socials
+@attrs
 class Browser:
-    default_Viewport = dict()
-    default_Viewport['isLandscape'] = True
+    default_Viewport: dict = attrib(validator=instance_of(dict), default=dict())
+
+    def __attrs_post_init__(self):
+        if self.default_Viewport.__len__() == 0:
+            self.default_Viewport['isLandscape'] = True
 
     async def get_browser(
             self,
@@ -126,8 +131,10 @@ class Wait:
             await el.screenshot()
 
 
+@attrs
 class RedditScreenshot(Browser, Wait):
-    __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
+    __dark_mode = attrib(validator=instance_of(bool),
+                         default=str_to_bool(getenv('DARK_THEME')) if getenv('DARK_THEME') else True)
     __dark_mode_enabled = False
     __is_nsfw_enabled = False
 
@@ -139,7 +146,7 @@ class RedditScreenshot(Browser, Wait):
             self.__dark_mode_enabled = True
 
             await self.click(
-                page_instance, 
+                page_instance,
                 '//*[contains(@class, \'header-user-dropdown\')]',
                 {'timeout': 5000},
             )

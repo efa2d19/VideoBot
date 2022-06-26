@@ -27,7 +27,7 @@ class CollectReddit:
     console: Console = attrib(validator=instance_of(Console),
                               default=Console(style='yellow'))
     manual_mode: bool = attrib(validator=instance_of(bool),
-                               default=str_to_bool(getenv('manual_mode', 'True')))
+                               default=str_to_bool(getenv('MANUAL_MODE', 'True')))
     submission, comments, is_nsfw = attrib(default=None), attrib(default=None), attrib(default=None)
 
     async def collect_reddit(self):

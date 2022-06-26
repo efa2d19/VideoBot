@@ -28,17 +28,19 @@ class RedditAPI:
     client_secret: str = attrib(validator=instance_of(str),
                                 default=getenv('CLIENT_SECRET'))
     submission_from_envs: str = attrib(validator=instance_of(str),
-                                       default=getenv('submission'))
+                                       default=getenv('SUBMISSION'))
     allow_nsfw: bool = attrib(validator=instance_of(bool),
-                              default=str_to_bool(getenv('allow_nsfw')) if getenv('allow_nsfw') else True)
+                              default=str_to_bool(getenv('ALLOW_NSFW')) if getenv('ALLOW_NSFW') else True)
     subreddit: str = attrib(validator=instance_of(str),
-                            default=getenv('subreddit'))
+                            default=getenv('SUBREDDIT'))
     number_of_comments: int = attrib(validator=instance_of(int), converter=int,
-                                     default=getenv('number_of_comments'))
+                                     default=getenv('NUM_OF_COMMENTS'))
     min_comment_lenght: int = attrib(validator=instance_of(int), converter=int,
-                                     default=getenv('min_comment_lenght'))
+                                     default=getenv('MIN_COMMENT_LENGTH'))
     max_comment_lenght: int = attrib(validator=instance_of(int), converter=int,
-                                     default=getenv('max_comment_lenght'))
+                                     default=getenv('MAX_COMMENT_LENGTH'))
+    min_upvotes: int = attrib(validator=instance_of(int), converter=int,
+                              default=getenv('MIN_UPVOTES'))
     if not client_id or not client_secret:
         raise ValueError('Check .env file, client_id or client_secret is not set')
 
@@ -83,9 +85,16 @@ class RedditAPI:
                     self.console.print('[magenta]Submission is NSFW.[/magenta]')
                     self.console.print('Skipping...')
                     continue
-            else:
-                is_nsfw = 'nsfw' in submission.whitelist_status
-                break
+            is_nsfw = 'nsfw' in submission.whitelist_status
+            break
+
+        while True:
+            submission = await self.get_submission(subreddit)
+            if submission.score < self.min_upvotes and not self.submission_from_envs:
+                self.console.print(f'[magenta]Not enough upvotes: {submission.score}.[/magenta]')
+                self.console.print('Skipping...')
+                continue
+            break
 
         top_level_comments = [comment for comment in submission.comments if
                               self.max_comment_lenght >= getattr(comment, 'body',

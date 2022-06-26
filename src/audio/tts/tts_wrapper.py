@@ -7,6 +7,7 @@ from os import getenv
 from re import sub
 
 from attr import attrs, attrib
+from attr.validators import instance_of
 
 from src.audio.tts.ValidVoices import voice_list
 from src.common import str_to_bool
@@ -21,7 +22,9 @@ def voice_validator(instance, attribute, value):
 class TikTokTTS:
     client: 'ClientSession' = attrib()
     # List of valid voices in ValidVoices.py
-    voice: str = attrib(validator=voice_validator, default=getenv('tts_voice', 'en_us_002'))
+    voice: str = attrib(validator=voice_validator, default=getenv('TTS_VOICE', 'en_us_002'))
+    profane_filter: bool = attrib(validator=instance_of(bool),
+                                  default=str_to_bool(getenv('PROFANE_FILTER')) if getenv('PROFANE_FILTER') else False)
     uri_base: str = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'
 
     @staticmethod
