@@ -13,16 +13,17 @@ from src.audio.tts.ValidVoices import voice_list
 from src.common import str_to_bool
 
 
-def voice_validator(instance, attribute, value):
-    if not value or value not in voice_list:
-        raise ValueError('Not valid voice:', value)
-
-
 @attrs
-class TikTokTTS:
+class TikTokTTS:  # TODO add different tts
     client: 'ClientSession' = attrib()
     # List of valid voices in ValidVoices.py
-    voice: str = attrib(validator=voice_validator, default=getenv('TTS_VOICE', 'en_us_002'))
+    voice: str = attrib(default=getenv('TTS_VOICE', 'en_us_002'))
+
+    @voice.validator
+    def voice_validator(self, attribute, value):
+        if not value or value not in voice_list:
+            raise ValueError('Not valid voice:', value)
+
     profane_filter: bool = attrib(validator=instance_of(bool),
                                   default=str_to_bool(getenv('PROFANE_FILTER')) if getenv('PROFANE_FILTER') else False)
     uri_base: str = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'

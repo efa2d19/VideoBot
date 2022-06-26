@@ -41,6 +41,23 @@ class RedditAPI:
                                      default=getenv('MAX_COMMENT_LENGTH'))
     min_upvotes: int = attrib(validator=instance_of(int), converter=int,
                               default=getenv('MIN_UPVOTES'))
+    submission_settings: list = attrib(default=getenv('SUBMISSION_SETTINGS', 'hot 50').split())
+
+    @submission_settings.validator
+    def check_submission_settings(self, attribute, value: list):
+        if value.__len__() != 2:
+            raise ValueError('Check SUBMISSION_SETTINGS: not enough arguments')
+        if value[0].lower() not in ['hot', 'top']:
+            raise ValueError('Check SUBMISSION_SETTINGS: not in (hot, top)')
+        if value[0].lower() == 'hot':
+            try:
+                int(value[1])
+            except ValueError:
+                raise ValueError(f'Check SUBMISSION_SETTINGS: wrong limit - {value[1]}')
+        if value[0].lower() == 'top':
+            if value[1] not in ['all', 'day', 'hour', 'month', 'week', 'year']:
+                raise ValueError(f'Check SUBMISSION_SETTINGS: wrong period - {value[1]}')
+
     if not client_id or not client_secret:
         raise ValueError('Check .env file, client_id or client_secret is not set')
 
@@ -63,9 +80,10 @@ class RedditAPI:
             else:
                 results = await self.reddit.submission(id=self.submission_from_envs)
         else:
-            # TODO add top/hot selector in envs
-            #  'time_filter: Can be one of: all, day, hour, month, week, year (default: all).'
-            results = random.choice([i async for i in subreddit.hot(limit=50)])
+            if self.submission_settings[0] == 'hot':
+                results = random.choice([i async for i in subreddit.hot(limit=int(self.submission_settings[1]))])
+            else:
+                results = random.choice([i async for i in subreddit.top(time_filter=self.submission_settings[1])])
         await results.load()
         return results
 

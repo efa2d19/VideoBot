@@ -8,7 +8,7 @@ async def search_yt(
         query: str,
         length: int | float,
 ) -> str:
-    yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)
+    yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)  # TODO move to something else
 
     yt_results = await yt_instance.next()
 

@@ -39,7 +39,7 @@ class ExceptionDecorator:
                     if not type(caughtException) == self.__exception:
                         from aiofiles import open
 
-                        async with open(f'.webdriver.log', 'w') as out:
+                        async with open(f'.webdriver.log', 'w') as out:  # TODO add normal logs)
                             await out.write(f'unexpected error - {caughtException}')
                 else:
                     if not type(caughtException) in self.__exception:
@@ -135,8 +135,8 @@ class Wait:
 class RedditScreenshot(Browser, Wait):
     __dark_mode = attrib(validator=instance_of(bool),
                          default=str_to_bool(getenv('DARK_THEME')) if getenv('DARK_THEME') else True)
-    __dark_mode_enabled = False
-    __is_nsfw_enabled = False
+    __dark_mode_enabled = attrib(default=False)
+    __is_nsfw_enabled = attrib(default=False)
 
     async def dark_theme(
             self,
