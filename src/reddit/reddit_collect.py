@@ -1,4 +1,3 @@
-from aiohttp import ClientSession
 from tqdm.asyncio import tqdm as async_tqdm
 
 from os import getenv
@@ -15,31 +14,29 @@ from src.audio.tts.tts_wrapper import TikTokTTS
 from src.api.reddit import RedditAPI
 from src.common import cleanup, str_to_bool
 
-
 load_dotenv()
 
 
 @attrs
-class CollectReddit:
-    client: ClientSession = attrib()
+class CollectReddit(RedditAPI):
     options: list[str] = attrib(validator=instance_of(list),
                                 default=['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]'])
     console: Console = attrib(validator=instance_of(Console),
                               default=Console(style='yellow'))
     manual_mode: bool = attrib(validator=instance_of(bool),
                                default=str_to_bool(getenv('MANUAL_MODE', 'True')))
-    submission, comments, is_nsfw = attrib(default=None), attrib(default=None), attrib(default=None)
 
     async def collect_reddit(self):
-        reddit_results = await async_tqdm.gather(
-            RedditAPI(self.client, self.console).reddit_setup(),
-            desc='Gathering Reddit',
-            leave=False,
-        )
-        self.submission, self.comments, self.is_nsfw = reddit_results[0]
         if self.manual_mode:
+            await self.get_submission()
             if not await self.confirm_submission():
                 return await self.collect_reddit()
+
+            await async_tqdm.gather(
+                self.get_comments(),
+                desc='Gathering comments',
+                leave=False,
+            )
             confirmed_comments = await self.confirm_comments()
             self.comments = confirmed_comments if confirmed_comments else self.comments
 
@@ -75,18 +72,20 @@ class CollectReddit:
     async def confirm_submission(
             self,
     ) -> bool:
+        self.console.clear()
         while True:
             self.console.print(
                 'Use this submission?',
                 end='\n\n'
             )
             self.console.print(
-                f'[cyan]{self.submission.title}[/cyan]', style=f'link {self.submission.shortlink}', end='\n\n'
+                f'[cyan]{self.submission_instance.title}[/cyan]', style=f'link {self.submission_instance.shortlink}',
+                end='\n\n'
             )
             self.column_from_obj(
                 [
-                    f'Upvotes: [cyan]{self.submission.score}[/cyan]',
-                    f'Comments: [cyan]{self.submission.num_comments}[/cyan]',
+                    f'Upvotes: [cyan]{self.submission_instance.score}[/cyan]',
+                    f'Comments: [cyan]{self.submission_instance.num_comments}[/cyan]',
                 ]
             )
 
@@ -95,6 +94,7 @@ class CollectReddit:
     async def confirm_comments(
             self,
     ) -> list | None:
+        self.console.clear()
         while True:
             self.console.print('Wanna approve comments by hand?', end='\n\n')
 
@@ -133,7 +133,19 @@ class CollectReddit:
     async def collect_content(
             self,
     ) -> int:
-        await self.collect_reddit()
+        await self.get_subreddit()
+
+        await async_tqdm.gather(
+            self.get_submissions(),
+            desc='Gathering submission',
+            leave=False,
+        )
+
+        await async_tqdm.gather(
+            self.collect_reddit(),
+            desc='Gathering Reddit',
+            leave=False,
+        )
 
         async_tasks_primary = list()
         screenshot = RedditScreenshot()
@@ -143,15 +155,15 @@ class CollectReddit:
         async_tasks_primary.append(
             screenshot(
                 async_browser,
-                f'https://www.reddit.com{self.submission.permalink}',
-                self.submission.fullname,
+                f'https://www.reddit.com{self.submission_instance.permalink}',
+                self.submission_instance.fullname,
                 'title',
                 self.is_nsfw,
             )
         )
         async_tasks_primary.append(
             tts(
-                self.submission.title,
+                self.submission_instance.title,
                 'title'
             )
         )

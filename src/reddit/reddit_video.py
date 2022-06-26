@@ -20,7 +20,7 @@ from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
 from src.common import cleanup, name_normalize, str_to_bool
-from src.reddit.collect_reddit import CollectReddit
+from src.reddit.reddit_collect import CollectReddit
 from src.video.back.back_video import background_video
 from src.audio.back.back_audio import background_audio
 
@@ -77,7 +77,7 @@ class Reddit:
             comments_len = await reddit_instance.collect_content()
 
             if not self.final_video_name:
-                self.final_video_name = name_normalize(reddit_instance.submission.title)
+                self.final_video_name = name_normalize(reddit_instance.submission_instance.title)
             else:
                 self.final_video_name = name_normalize(self.final_video_name)
 

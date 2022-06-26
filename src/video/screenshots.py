@@ -3,24 +3,23 @@ from pyppeteer.page import Page as PageCls
 from pyppeteer.element_handle import ElementHandle as ElementHandleCls
 from pyppeteer.browser import Browser as BrowserCls
 from pyppeteer.errors import TimeoutError as BrowserTimeoutError
-from pyppeteer.errors import PyppeteerError
 
 from os import getenv
 from attr import attrs, attrib
-from attr.validators import instance_of, optional
+from attr.validators import instance_of
 
 from src.common import str_to_bool
 
-from typing import TypeVar, Optional, Union, Callable
+from typing import TypeVar, Optional, Callable, Union
 
 _function = TypeVar('_function', bound=Callable[..., object])
-_exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
+_exceptions = TypeVar('_exceptions', bound=Optional[Union[type, tuple, list]])
 
 
 @attrs
 class ExceptionDecorator:
-    __exception: Optional[_exceptions] = attrib(validator=optional(instance_of(_exceptions)), default=None),
-    __default_exception = attrib(validator=optional(instance_of(PyppeteerError)), default=BrowserTimeoutError)
+    __exception: Optional[_exceptions] = attrib(default=None)
+    __default_exception: _exceptions = attrib(default=BrowserTimeoutError)
 
     def __attrs_post_init__(self):
         if not self.__exception:
@@ -35,18 +34,18 @@ class ExceptionDecorator:
                 obj_to_return = await func(*args, **kwargs)
                 return obj_to_return
             except Exception as caughtException:
-                if type(self.__exception) == type:
-                    if not type(caughtException) == self.__exception:
-                        from aiofiles import open
+                import logging
 
-                        async with open(f'.webdriver.log', 'w') as out:  # TODO add normal logs)
-                            await out.write(f'unexpected error - {caughtException}')
+                if isinstance(self.__exception, type):
+                    if not type(caughtException) == self.__exception:
+                        logging.basicConfig(filename='webdriver.log', filemode='w', encoding='utf-8',
+                                            level=logging.DEBUG)
+                        logging.error(f'unexpected error - {caughtException}')
                 else:
                     if not type(caughtException) in self.__exception:
                         from aiofiles import open
 
-                        async with open(f'.webdriver.log', 'w') as out:
-                            await out.write(f'unexpected error - {caughtException}')
+                        logging.error(f'unexpected error - {caughtException}')
 
         return wrapper
 
@@ -142,7 +141,7 @@ class RedditScreenshot(Browser, Wait):
             self,
             page_instance: PageCls,
     ) -> None:
-        if self.__dark_mode == 'True' and not self.__dark_mode_enabled:
+        if self.__dark_mode and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
 
             await self.click(

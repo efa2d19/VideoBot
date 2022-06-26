@@ -1,6 +1,6 @@
 from asyncio import run
 
-from src.reddit.reddit_main import Reddit
+from src.reddit.reddit_video import Reddit
 
 
 async def main():
