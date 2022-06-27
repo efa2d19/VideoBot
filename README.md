@@ -1,6 +1,6 @@
 # VideoBot
 
-### :zap: Makes you live better by automizing routine work
+### :zap: Makes your life better by automizing routine work
 
 &nbsp;
 
@@ -13,7 +13,6 @@
 3. 🎞 Montage 'em all together
 
 > ![bot_cli](https://user-images.githubusercontent.com/44712637/176018906-a4adcbde-5a9f-4d88-bffd-88934049df2a.gif)
-
 
 ### What you need to do to start?
 
@@ -39,9 +38,7 @@ Beautiful video ready to be uploaded to your socials like:
 ### Example
 
 
-
 https://user-images.githubusercontent.com/44712637/176014919-9c798f34-9ebf-4889-a799-ad4cef125339.mp4
-
 
 
 ## Other details
@@ -52,7 +49,7 @@ https://user-images.githubusercontent.com/44712637/176014919-9c798f34-9ebf-4889-
    </summary>
   &nbsp;
   
-  * 🤖 Find comments on Reddit and makes video compilation of them
+  * 🤖 Finds comments on Reddit and makes video compilation of them
   * 🏴 Dark theme
   * 🎤 Customizable TTS voices
   * 🎑 Customizable background video / audio
@@ -81,4 +78,4 @@ https://user-images.githubusercontent.com/44712637/176014919-9c798f34-9ebf-4889-
 [RedditVideoMakerBot](https://github.com/elebumm/RedditVideoMakerBot)
 
 > P.S. Basically I wanted to make a rival for the repository mentioned above.\
-Competition drives progress, doesn't it 🐸
+> Competition drives progress, doesn't it 🐸
