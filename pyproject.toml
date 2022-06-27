@@ -18,6 +18,7 @@ rich = "12.4.4"
 aiofiles = "0.6.0"
 pytube = "12.1.0"
 youtube-search-python = "1.6.5"
+requests = "^2.28.0"
 
 [tool.poetry.dev-dependencies]
 

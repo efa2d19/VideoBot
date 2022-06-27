@@ -31,6 +31,7 @@ load_dotenv()
 @attrs
 class Reddit:
     # Settings w/ checks for incorrect envs
+    # TODO maybe move to pydantic
     opacity: int = attrib(converter=int, validator=instance_of(int),
                           default=getenv('OPACITY', 95))
     time_before_first_picture: float = attrib(converter=float, validator=instance_of((float, int)),

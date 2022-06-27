@@ -18,6 +18,7 @@ _exceptions = TypeVar('_exceptions', bound=Optional[Union[type, tuple, list]])
 
 @attrs
 class ExceptionDecorator:
+    # TODO add typing
     __exception: Optional[_exceptions] = attrib(default=None)
     __default_exception: _exceptions = attrib(default=BrowserTimeoutError)
 
@@ -38,13 +39,11 @@ class ExceptionDecorator:
 
                 if isinstance(self.__exception, type):
                     if not type(caughtException) == self.__exception:
-                        logging.basicConfig(filename='webdriver.log', filemode='w', encoding='utf-8',
+                        logging.basicConfig(filename='.webdriver.log', filemode='w', encoding='utf-8',
                                             level=logging.DEBUG)
                         logging.error(f'unexpected error - {caughtException}')
                 else:
                     if not type(caughtException) in self.__exception:
-                        from aiofiles import open
-
                         logging.error(f'unexpected error - {caughtException}')
 
         return wrapper

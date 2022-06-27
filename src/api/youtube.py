@@ -8,7 +8,8 @@ async def search_yt(
         query: str,
         length: int | float,
 ) -> str:
-    yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)  # TODO move to something else
+    # TODO maybe move to something else (deprecated)
+    yt_instance = CustomSearch(query, VideoDurationFilter.short, limit=20)
 
     yt_results = await yt_instance.next()
 
@@ -20,6 +21,22 @@ async def search_yt(
     return yt_result
 
 
+def download_yt(
+        link: str,
+        file_title: str,
+        file_folder: str = 'video',
+        file_extension: str = 'mp4',
+) -> None:
+    if file_folder == 'video':
+        YouTube(link).streams.filter(type='audio').order_by('abr').desc().first().download(
+            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
+    if file_folder == 'audio':
+        YouTube(link).streams.filter().order_by('resolution').desc().first().download(
+            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
+    else:
+        raise ValueError(f'Incorrect file_folder: {file_folder}')
+
+
 async def youtube_get_file(
         file_title: str,
         link: str,
@@ -29,13 +46,11 @@ async def youtube_get_file(
         file_folder: str = 'video',
 ) -> None:
     if link:
-        YouTube(link).streams.filter(progressive=True).order_by('resolution').desc().first().download(
-            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
+        download_yt(link, file_title, file_folder, file_extension)
     else:
         yt_result = await search_yt(query, length)
 
         if not yt_result:
             raise ValueError(f'Can\'t find video:\ntitle - {query}\nlength - {int(length)}')
 
-        YouTube(yt_result).streams.filter(progressive=True).order_by('resolution').desc().first().download(
-            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
+        download_yt(yt_result, file_title, file_folder, file_extension)
