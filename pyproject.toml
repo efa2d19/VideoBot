@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "videobot"
-version = "1.1.0-alpha"
+version = "1.1.0"
 description = "Bot that makes video creation so simple"
 authors = ["Drugsosos <44712637+Drugsosos@users.noreply.github.com>"]
 license = "Apache-2.0"
