@@ -5,48 +5,46 @@ from pyppeteer.browser import Browser as BrowserCls
 from pyppeteer.errors import TimeoutError as BrowserTimeoutError
 
 from os import getenv
+from attr import attrs, attrib
+from attr.validators import instance_of
 
-from typing import TypeVar, Optional, Union, Callable
+from src.common import str_to_bool
 
+from typing import TypeVar, Optional, Callable, Union
 
 _function = TypeVar('_function', bound=Callable[..., object])
-_exceptions = TypeVar('_exceptions', bound=Optional[Union[str, tuple, list]])
+_exceptions = TypeVar('_exceptions', bound=Optional[Union[type, tuple, list]])
 
 
+@attrs
 class ExceptionDecorator:
-    __default_exception = BrowserTimeoutError
+    # TODO add typing
+    __exception: Optional[_exceptions] = attrib(default=None)
+    __default_exception: _exceptions = attrib(default=BrowserTimeoutError)
 
-    def __init__(
-            self,
-            exception: Optional[_exceptions] = None,
-    ):
-        if exception:
-            self.__exception = exception
-        else:
+    def __attrs_post_init__(self):
+        if not self.__exception:
             self.__exception = self.__default_exception
 
     def __call__(
             self,
-            func,
+            func: _function,
     ):
         async def wrapper(*args, **kwargs):
             try:
                 obj_to_return = await func(*args, **kwargs)
                 return obj_to_return
             except Exception as caughtException:
-                if type(self.__exception) == type:
-                    print(caughtException)  # TODO remove later
-                    if not type(caughtException) == self.__exception:
-                        from aiofiles import open
+                import logging
 
-                        async with open(f'.webdriver.log', 'w') as out:
-                            await out.write(f'unexpected error - {caughtException}')
+                if isinstance(self.__exception, type):
+                    if not type(caughtException) == self.__exception:
+                        logging.basicConfig(filename='.webdriver.log', filemode='w', encoding='utf-8',
+                                            level=logging.DEBUG)
+                        logging.error(f'unexpected error - {caughtException}')
                 else:
                     if not type(caughtException) in self.__exception:
-                        from aiofiles import open
-
-                        async with open(f'.webdriver.log', 'w') as out:
-                            await out.write(f'unexpected error - {caughtException}')
+                        logging.error(f'unexpected error - {caughtException}')
 
         return wrapper
 
@@ -55,7 +53,7 @@ def catch_exception(
         func: Optional[_function],
         exception: Optional[_exceptions] = None,
 ) -> ExceptionDecorator | _function:
-    exceptor = ExceptionDecorator(exception=exception)
+    exceptor = ExceptionDecorator(exception)
     if func:
         exceptor = exceptor(func)
     return exceptor
@@ -63,9 +61,13 @@ def catch_exception(
 
 # It exists, so I can import everything at once
 # And to add it to other classes for other socials
+@attrs
 class Browser:
-    default_Viewport = dict()
-    default_Viewport['isLandscape'] = True
+    default_Viewport: dict = attrib(validator=instance_of(dict), default=dict())
+
+    def __attrs_post_init__(self):
+        if self.default_Viewport.__len__() == 0:
+            self.default_Viewport['isLandscape'] = True
 
     async def get_browser(
             self,
@@ -127,20 +129,22 @@ class Wait:
             await el.screenshot()
 
 
+@attrs
 class RedditScreenshot(Browser, Wait):
-    __dark_mode = getenv('dark_theme', 'True') if getenv('dark_theme', 'True') else 'True'
-    __dark_mode_enabled = False
-    __is_nsfw_enabled = False
+    __dark_mode = attrib(validator=instance_of(bool),
+                         default=str_to_bool(getenv('DARK_THEME')) if getenv('DARK_THEME') else True)
+    __dark_mode_enabled = attrib(default=False)
+    __is_nsfw_enabled = attrib(default=False)
 
     async def dark_theme(
             self,
             page_instance: PageCls,
     ) -> None:
-        if self.__dark_mode == 'True' and not self.__dark_mode_enabled:
+        if self.__dark_mode and not self.__dark_mode_enabled:
             self.__dark_mode_enabled = True
 
             await self.click(
-                page_instance, 
+                page_instance,
                 '//*[contains(@class, \'header-user-dropdown\')]',
                 {'timeout': 5000},
             )

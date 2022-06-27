@@ -1,10 +1,13 @@
-import asyncio
+from asyncio import run
 
-from dotenv import load_dotenv
-from src.reddit_main import main
+from src.reddit.reddit_video import Reddit
 
 
-load_dotenv()
+async def main():
+    # TODO add selector for different platforms later
+    content = Reddit()
+    await content()
+
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    run(main())

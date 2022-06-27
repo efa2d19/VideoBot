@@ -6,23 +6,27 @@ import base64
 from os import getenv
 from re import sub
 
+from attr import attrs, attrib
+from attr.validators import instance_of
+
 from src.audio.tts.ValidVoices import voice_list
+from src.common import str_to_bool
 
 
-class TikTokTTS:
-    uri_base = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'
+@attrs
+class TikTokTTS:  # TODO add different tts
+    client: 'ClientSession' = attrib()
+    # List of valid voices in ValidVoices.py
+    voice: str = attrib(default=getenv('TTS_VOICE', 'en_us_002'))
 
-    def __init__(
-            self,
-            client: 'ClientSession',
-            voice: str = 'en_us_002',  # List of valid voices in ValidVoices.py
-    ):
-        self.client = client
-        env_voice = getenv('tts_voice')
-        if env_voice and env_voice in voice_list:
-            self.voice = env_voice
-        else:
-            self.voice = voice
+    @voice.validator
+    def voice_validator(self, attribute, value):
+        if not value or value not in voice_list:
+            raise ValueError('Not valid voice:', value)
+
+    profane_filter: bool = attrib(validator=instance_of(bool),
+                                  default=str_to_bool(getenv('PROFANE_FILTER')) if getenv('PROFANE_FILTER') else False)
+    uri_base: str = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'
 
     @staticmethod
     def text_sanitize(
@@ -85,7 +89,7 @@ class TikTokTTS:
 
         req_text = self.text_sanitize(req_text)
 
-        if getenv("PROFANE_FILTER", 'False') == 'True':
+        if str_to_bool(getenv('PROFANE_FILTER', 'False')):
             from src.audio.tts.profane_filter import profane_filter
 
             req_text = profane_filter(req_text)
