@@ -122,9 +122,9 @@ class RedditAPI:
     ) -> None:
         if self.submission_from_envs:
             if 'http' in self.submission_from_envs:
-                self.submission_instances = await self.reddit.submission(url=self.submission_from_envs)
+                self.submission_instances = [await self.reddit.submission(url=self.submission_from_envs)]
             else:
-                self.submission_instances = await self.reddit.submission(id=self.submission_from_envs)
+                self.submission_instances = [await self.reddit.submission(id=self.submission_from_envs)]
         else:
             if self.submission_settings[0] == 'hot':
                 self.submission_instances = [i async for i in
