@@ -12,6 +12,9 @@
 2. 🎧 Adds background video & audio to spice things up
 3. 🎞 Montage 'em all together
 
+> ![bot_cli](https://user-images.githubusercontent.com/44712637/176018906-a4adcbde-5a9f-4d88-bffd-88934049df2a.gif)
+
+
 ### What you need to do to start?
 
 1. 👨‍💻 Create an application in Reddit
@@ -32,6 +35,14 @@ Beautiful video ready to be uploaded to your socials like:
 
 > I would recommend to check it first before uploading\
 > But I'm not a lawmaker, so do what you want 👁👄👁
+
+### Example
+
+
+
+https://user-images.githubusercontent.com/44712637/176014919-9c798f34-9ebf-4889-a799-ad4cef125339.mp4
+
+
 
 ## Other details
 
