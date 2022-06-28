@@ -30,6 +30,7 @@ class CollectReddit(RedditAPI):
         if self.manual_mode:
             await self.get_submission()
             if not await self.confirm_submission():
+                self.submission_instances.remove(self.submission_instance)
                 return await self.collect_reddit()
 
             await async_tqdm.gather(

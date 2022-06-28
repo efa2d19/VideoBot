@@ -49,7 +49,8 @@ class Reddit:
     final_video_name: str | None = attrib(validator=instance_of((str, None)),
                                           default=getenv('FINAL_VIDEO_NAME'))
     enable_background_audio: bool = attrib(validator=instance_of(bool),
-                                           default=str_to_bool(getenv('ENABLE_BACK_AUDIO', 'True')))
+                                           default=str_to_bool(getenv('ENABLE_BACK_AUDIO')) if getenv(
+                                               'ENABLE_BACK_AUDIO') else True)
     width: int = attrib(converter=int, validator=instance_of(int),
                         default=getenv('VIDEO_WIDTH', 1080))
     height: int = attrib(converter=int, validator=instance_of(int),
@@ -112,7 +113,7 @@ class Reddit:
                 audio,
                 correct_audio_offset + video_duration,
             )
-            if video_duration + temp_audio_clip.duration + correct_audio_offset > self.final_video_length:
+            if video_duration + temp_audio_clip.duration + correct_audio_offset + self.delay_before_end > self.final_video_length:
                 continue
             video_duration += temp_audio_clip.duration + correct_audio_offset
             audio_clip_list.append(temp_audio_clip)
@@ -123,7 +124,7 @@ class Reddit:
         async_tasks = list()
 
         async_tasks.append(background_video(video_duration))
-        if self.enable_background_audio == 'True':
+        if self.enable_background_audio:
             async_tasks.append(background_audio(video_duration))
 
         await async_tqdm.gather(
@@ -132,7 +133,7 @@ class Reddit:
             leave=False,
         )
 
-        if self.enable_background_audio == 'True':
+        if self.enable_background_audio:
             back_audio = (
                 AudioFileClip('assets/audio/back.mp3')
                 .set_start(0)
@@ -149,7 +150,7 @@ class Reddit:
         final_audio = CompositeAudioClip(audio_clip_list)
 
         index_offset = 1
-        if self.enable_background_audio == 'True':
+        if self.enable_background_audio:
             index_offset += 1
 
         photo_clip_list = list()

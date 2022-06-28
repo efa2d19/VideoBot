@@ -28,13 +28,14 @@ def download_yt(
         file_extension: str = 'mp4',
 ) -> None:
     if file_folder == 'video':
-        YouTube(link).streams.filter(type='audio').order_by('abr').desc().first().download(
-            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
-    if file_folder == 'audio':
         YouTube(link).streams.filter().order_by('resolution').desc().first().download(
             output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
-    else:
-        raise ValueError(f'Incorrect file_folder: {file_folder}')
+        return
+    if file_folder == 'audio':
+        YouTube(link).streams.filter(type='audio').order_by('abr').desc().first().download(
+            output_path=f'assets/{file_folder}/', filename=f'{file_title}.{file_extension}')
+        return
+    raise ValueError(f'Incorrect file_folder: {file_folder}')
 
 
 async def youtube_get_file(
