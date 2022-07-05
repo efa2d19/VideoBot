@@ -5,24 +5,17 @@ from dotenv import load_dotenv
 from attr import attrs, attrib
 from attr.validators import instance_of
 
-from rich.console import Console
-from rich.columns import Columns
-
 from src.video.screenshots import RedditScreenshot
 from src.audio.tts.tts_wrapper import TikTokTTS
 
 from src.api.reddit import RedditAPI
-from src.common import cleanup, str_to_bool
+from src.common import str_to_bool
 
 load_dotenv()
 
 
 @attrs
 class CollectReddit(RedditAPI):
-    options: list[str] = attrib(validator=instance_of(list),
-                                default=['[green](y)es[/green]', '[magenta](n)o[/magenta]', '[red](e)xit[/red]'])
-    console: Console = attrib(validator=instance_of(Console),
-                              default=Console(style='yellow'))
     manual_mode: bool = attrib(validator=instance_of(bool),
                                default=str_to_bool(getenv('MANUAL_MODE', 'True')))
 
@@ -33,42 +26,15 @@ class CollectReddit(RedditAPI):
                 self.submission_instances.remove(self.submission_instance)
                 return await self.collect_reddit()
 
-            await async_tqdm.gather(
+            self.console.clear()
+
+            await async_tqdm.gather(  # TODO remove newline before bar
                 self.get_comments(),
                 desc='Gathering comments',
                 leave=False,
             )
             confirmed_comments = await self.confirm_comments()
             self.comments = confirmed_comments if confirmed_comments else self.comments
-
-    def column_from_obj(
-            self,
-            obj: list | str,
-    ) -> None:
-        self.console.print(Columns(obj, equal=True, padding=(0, 3)))
-
-    def input_validation(
-            self,
-    ):
-        self.column_from_obj(self.options)
-
-        received = input()
-
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i], [i for i in 'exit'])):
-            self.console.clear()
-            self.console.print('[red]Exiting...[/red]')
-            cleanup(exit_code=1)
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
-                   [i for i in 'no'])):
-            self.console.clear()
-            return False
-        if all(map(lambda x, y: x.upper() == y.upper(), [i for i in received if i],
-                   [i for i in 'yes'])):
-            self.console.clear()
-            return True
-        else:
-            self.console.clear()
-            self.console.print('[red]I don\'t understand you... Let\'s try again[/red]', end='\n\n')
 
     async def confirm_submission(
             self,
@@ -100,6 +66,7 @@ class CollectReddit(RedditAPI):
             self.console.print('Wanna approve comments by hand?', end='\n\n')
 
             if self.input_validation():
+                self.console.clear()
                 confirmed_comments = list()
 
                 for comment in self.comments:
@@ -120,13 +87,14 @@ class CollectReddit(RedditAPI):
                             ]
                         )
                         if not self.input_validation():
+                            self.console.clear()
                             self.console.print('[magenta]Comment removed![/magenta]', end='\n\n')
                             break
                         else:
                             confirmed_comments.append(comment)
+                            self.console.clear()
                             self.console.print('[green]Comment approved![/green]', end='\n\n')
                             break
-                self.console.clear()
                 return confirmed_comments
             self.console.clear()
             return
@@ -152,15 +120,17 @@ class CollectReddit(RedditAPI):
         screenshot = RedditScreenshot()
         tts = TikTokTTS(self.client)
         async_browser = await screenshot.get_browser()
-        # It's a crutch to enable dark_mode or accept nsfw once
-        async_tasks_primary.append(
+        # To enable dark_mode or accept nsfw once
+        await async_tqdm.gather(
             screenshot(
                 async_browser,
                 f'https://www.reddit.com{self.submission_instance.permalink}',
                 self.submission_instance.fullname,
                 'title',
                 self.is_nsfw,
-            )
+            ),
+            desc='Setting up browser',
+            leave=False,
         )
         async_tasks_primary.append(
             tts(
@@ -181,13 +151,15 @@ class CollectReddit(RedditAPI):
             *async_tasks_primary,
             desc='Gathering TTS',
             leave=False,
-            # Crutch for screenshot with title
-            total=async_tasks_primary.__len__() - 1,
         )
 
         async_tasks_secondary = list()
 
-        for index, comment in enumerate(self.comments):
+        voiced_comments = [
+            comments for comments, condition in zip(self.comments, async_tasks_secondary[1:]) if condition
+        ]
+
+        for index, comment in enumerate(voiced_comments):
             async_tasks_secondary.append(
                 screenshot(
                     async_browser,

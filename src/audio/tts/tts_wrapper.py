@@ -10,22 +10,29 @@ from attr import attrs, attrib
 from attr.validators import instance_of
 
 from src.audio.tts.ValidVoices import voice_list
-from src.common import str_to_bool
+from src.common import str_to_bool, audio_length
 
 
-@attrs
+@attrs(auto_attribs=True)
 class TikTokTTS:  # TODO add different tts
-    client: 'ClientSession' = attrib()
+    client: 'ClientSession'
     # List of valid voices in ValidVoices.py
     voice: str = attrib(default=getenv('TTS_VOICE', 'en_us_002'))
+    max_length: int = attrib(
+        converter=int, validator=instance_of(int),
+        default=getenv('FINAL_VIDEO_LENGTH', 60)
+    )
+    total_length: int = 0
 
     @voice.validator
     def voice_validator(self, attribute, value):
         if not value or value not in voice_list:
             raise ValueError('Not valid voice:', value)
 
-    profane_filter: bool = attrib(validator=instance_of(bool),
-                                  default=str_to_bool(getenv('PROFANE_FILTER')) if getenv('PROFANE_FILTER') else False)
+    profane_filter: bool = attrib(
+        validator=instance_of(bool),
+        default=str_to_bool(getenv('PROFANE_FILTER')) if getenv('PROFANE_FILTER') else False
+    )
     uri_base: str = 'https://api16-normal-useast5.us.tiktokv.com/media/api/text/speech/invoke/'
 
     @staticmethod
@@ -69,21 +76,27 @@ class TikTokTTS:  # TODO add different tts
             output_text = [response.get('data').get('v_str')][0]
         return output_text
 
-    @staticmethod
     async def decode_tts(
+            self,
             output_text: str,
             filename: str,
-    ) -> None:
+    ) -> bool:
         decoded_text = base64.b64decode(output_text)
 
         async with open(f'assets/audio/{filename}.mp3', 'wb') as out:
             await out.write(decoded_text)
 
+            if self.total_length >= self.max_length:
+                return False
+
+            self.max_length += audio_length(f'assets/audio/{filename}.mp3')
+            return True
+
     async def __call__(
             self,
             req_text: str,
             filename: str | int,
-    ) -> None:
+    ) -> bool:
         if not req_text:
             raise ValueError(f'Text never came for file - {filename}.mp3')
 
@@ -96,16 +109,14 @@ class TikTokTTS:  # TODO add different tts
 
         output_text = ''
 
-        # use multiple api requests to make the sentence
+        # Use multiple api requests to make the sentence
         if len(req_text) > 299:
             for part in self.text_len_sanitize(req_text, 299):
                 if part:
                     output_text += await self.get_tts(part)
+            return await self.decode_tts(output_text, filename)
 
-            await self.decode_tts(output_text, filename)
-            return
-
-        # if under 299 characters do it in one
+        # If under 299 characters do it in one
         output_text = await self.get_tts(req_text)
 
-        await self.decode_tts(output_text, filename)
+        return await self.decode_tts(output_text, filename)

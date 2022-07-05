@@ -7,20 +7,17 @@ import random
 from os import getenv
 from dotenv import load_dotenv
 
-from rich.console import Console
-
 from attr import attrs, attrib
 from attrs.validators import instance_of, optional
 
-from src.common import str_to_bool
+from src.common import str_to_bool, Console
 
 load_dotenv()
 
 
 @attrs
-class RedditAPI:
+class RedditAPI(Console):
     client: ClientSession = attrib()
-    console: Console = attrib(validator=instance_of(Console))
     subreddit_instance = attrib(validator=optional(instance_of(asyncpraw.Reddit)),
                                 default=None)
     submission_instance = attrib(validator=optional(instance_of(asyncpraw.Reddit)),

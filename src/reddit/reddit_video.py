@@ -19,7 +19,7 @@ from moviepy.audio.fx.audio_loop import audio_loop
 from moviepy.audio.fx.volumex import volumex
 from moviepy.audio.fx.audio_normalize import audio_normalize
 
-from src.common import cleanup, name_normalize, str_to_bool
+from src.common import cleanup, name_normalize, str_to_bool, Console
 from src.reddit.reddit_collect import CollectReddit
 from src.video.back.back_video import background_video
 from src.audio.back.back_audio import background_audio
@@ -29,7 +29,7 @@ load_dotenv()
 
 
 @attrs
-class Reddit:
+class Reddit(Console):
     # Settings w/ checks for incorrect envs
     # TODO maybe move to pydantic
     opacity: int = attrib(converter=int, validator=instance_of(int),
@@ -113,7 +113,8 @@ class Reddit:
                 audio,
                 correct_audio_offset + video_duration,
             )
-            if video_duration + temp_audio_clip.duration + correct_audio_offset + self.delay_before_end > self.final_video_length:
+            if video_duration + temp_audio_clip.duration + correct_audio_offset + self.delay_before_end \
+                    > self.final_video_length:
                 continue
             video_duration += temp_audio_clip.duration + correct_audio_offset
             audio_clip_list.append(temp_audio_clip)
