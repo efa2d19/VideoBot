@@ -50,6 +50,7 @@ class CollectReddit(RedditAPI):
     def input_validation(
             self,
     ):
+        self.console.print()
         self.column_from_obj(self.options)
 
         received = input()
@@ -83,6 +84,10 @@ class CollectReddit(RedditAPI):
                 f'[cyan]{self.submission_instance.title}[/cyan]', style=f'link {self.submission_instance.shortlink}',
                 end='\n\n'
             )
+            self.console.print(
+                '[red]!!!NSFW!!![red]',
+                end='\n\n'
+            ) if self.is_nsfw else None
             self.column_from_obj(
                 [
                     f'Upvotes: [cyan]{self.submission_instance.score}[/cyan]',
@@ -97,12 +102,12 @@ class CollectReddit(RedditAPI):
     ) -> list | None:
         self.console.clear()
         while True:
-            self.console.print('Wanna approve comments by hand?', end='\n\n')
+            self.console.print('Wanna approve comments by hand?')
 
             if self.input_validation():
                 confirmed_comments = list()
 
-                for comment in self.comments:
+                for index, comment in enumerate(self.comments, start=1):
                     while True:
                         self.console.print(
                             f'Use this comment?',
@@ -117,6 +122,12 @@ class CollectReddit(RedditAPI):
                             [
                                 f'Upvotes: [cyan]{comment.score}[/cyan]',
                                 f'Awards: [cyan]{comment.total_awards_received}[/cyan]',
+                            ]
+                        )
+                        self.column_from_obj(
+                            [
+                                f'Progress: [cyan]{index} / {self.comments.__len__()}[/cyan]',
+                                f'Confirmed: [cyan]{confirmed_comments.__len__()}[/cyan]',
                             ]
                         )
                         if not self.input_validation():

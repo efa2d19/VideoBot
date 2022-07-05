@@ -95,7 +95,7 @@ class RedditAPI:
     ) -> bool:
         if self.submission_from_envs:
             return True
-        async with open('.submission.log', 'r') as out:
+        async with open('.submission.log', 'a+') as out:
             if submission.id in await out.read():
                 self.console.clear()
                 self.console.print('[magenta]Submission was already used.[/magenta]')
@@ -153,9 +153,10 @@ class RedditAPI:
             await out.write('\n')
             await out.write(self.submission_instance.id)
 
-        top_level_comments = [comment for comment in self.submission_instance.comments if
-                              self.max_comment_lenght >= getattr(comment, 'body',
-                                                                 '').__len__() >= self.min_comment_lenght]
+        top_level_comments = [
+            comment for comment in self.submission_instance.comments if
+            self.max_comment_lenght >= getattr(comment, 'body', '').__len__() >= self.min_comment_lenght
+        ]
 
         def sort_by_score(comment):
             return comment.score
