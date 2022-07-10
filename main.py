@@ -1,4 +1,4 @@
-from asyncio import run
+from asyncio import run, CancelledError
 
 from src.reddit.reddit_video import Reddit
 
@@ -10,4 +10,11 @@ async def main():
 
 
 if __name__ == '__main__':
-    run(main())
+    try:
+        run(main())
+    except (KeyboardInterrupt, CancelledError):
+        print('\nExiting...')
+        exit(1)
+    except Exception as e:
+        print(f'\nError occurred: {e}')
+        exit(1)
