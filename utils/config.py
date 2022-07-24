@@ -1,13 +1,11 @@
 import toml
 from os.path import exists
-from rich.console import Console
 from typing import Optional, Union, TypeVar, Callable
 
-from utils.console import handle_input
+from utils.console import handle_input, console
 
 function = TypeVar("function", bound=Callable[..., object])
 
-console = Console()
 config: Optional[dict] = None
 config_name: str = "config.toml"
 config_template_name: str = ".config.template.toml"
