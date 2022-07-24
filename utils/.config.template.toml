@@ -1,0 +1,78 @@
+[reddit]
+
+[reddit.cliend_id]
+optional = false
+type = "str"
+example = ""
+comment = ""
+
+[reddit.cliend_secret]
+optional = false
+type = "str"
+example = ""
+comment = ""
+
+[reddit.subreddit]
+optional = false
+default = "AskReddit"
+type = "str"
+example = "AskReddit"
+comment = ""
+
+[reddit.submission]
+optional = true
+type = "str"
+example = ""
+comment = ""
+
+[reddit.sorting]
+optional = true
+default = "hot"
+options = ["hot", "top"]
+type = "str"
+example = ""
+comment = ""
+
+[reddit.min_score]
+optional = true
+default = "200"
+type = "int"
+example = "500"
+comment = ""
+
+[video]
+
+[video.FINAL_VIDEO_LENGTH]
+[video.DARK_THEME]
+[video.MIN_COMMENT_LENGTH]
+[video.MAX_COMMENT_LENGTH]
+[video.OPACITY]
+[video.VIDEO_WIDTH]
+[video.VIDEO_HEIGHT]
+[video.TIME_BEFORE_FIRST]
+[video.TIME_BEFORE_TTS]
+[video.TIME_BETWEEN_PICTURES]
+[video.BACK_MUSIC_VOLUME]
+[video.DELAY_BEFORE_END]
+[video.FINAL_VIDEO_NAME]
+
+[settings]
+
+[settings.MANUAL_MODE]
+[settings.ALLOW_NSFW]
+[settings.PROFANE_FILTER]
+
+[tts]
+
+[tts.TTS_VOICE]
+
+[backvideo]
+
+[backvideo.YT_BACK_VIDEO]
+[backvideo.BACK_VIDEO_QUERY]
+
+[backaudio]
+
+[backaudio.ENABLE_BACK_AUDIO]
+[backaudio.YT_BACK_AUDIO]
+[backaudio.BACK_AUDIO_QUERY]
