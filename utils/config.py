@@ -1,5 +1,6 @@
 import toml
 from os.path import exists
+from re import match
 from typing import Optional, Union, TypeVar, Callable
 
 from utils.console import handle_input, console
@@ -8,7 +9,7 @@ function = TypeVar("function", bound=Callable[..., object])
 
 config: Optional[dict] = None
 config_name: str = "config.toml"
-config_template_name: str = ".config.template.toml"
+config_template_name: str = "utils/.config.template.toml"
 
 
 def crawl(
@@ -38,14 +39,58 @@ def check(
         value: any,
         checks: dict,
         name: str,
-):
-    correct = True if value else False
+) -> any:
+    """
+    Checks values and asks user for input if value is incorrect
+
+    Args:
+        value: Values to check
+        checks: List of checks as a dict
+        name: Name of the value to be checked
+
+    Returns:
+        Correct value
+    """
+    correct = True if value != {} else False
 
     if correct and "type" in checks:
         try:
             value = eval(checks["type"])(value)
         except Exception:  # noqa (Exception is fine, it's not too broad)
             correct = False
+
+    if (
+            correct and "options" in checks and value not in checks["options"]
+    ):  # FAILSTATE Value is not one of the options
+        correct = False
+    if (
+            correct
+            and "regex" in checks
+            and (
+            (isinstance(value, str) and match(checks["regex"], value) is None)
+            or not isinstance(value, str)
+    )
+    ):  # FAILSTATE Value doesn't match regex, or has regex but is not a string.
+        correct = False
+
+    if (
+            correct
+            and not hasattr(value, "__iter__")
+            and (
+            ("nmin" in checks and checks["nmin"] is not None and value < checks["nmin"])
+            or ("nmax" in checks and checks["nmax"] is not None and value > checks["nmax"])
+    )
+    ):
+        correct = False
+    if (
+            correct
+            and hasattr(value, "__iter__")
+            and (
+            ("nmin" in checks and checks["nmin"] is not None and len(value) < checks["nmin"])
+            or ("nmax" in checks and checks["nmax"] is not None and len(value) > checks["nmax"])
+    )
+    ):
+        correct = False
 
     if not correct:
         default_values = {
@@ -61,7 +106,7 @@ def check(
             "optional": False,
         }
 
-        [checks.update({key: value}) for key, value in default_values.values() if not checks.get(key)]
+        [checks.update({key: value}) for key, value in default_values.items() if checks.get(key, 'Non') == 'Non']
 
         value = handle_input(name=name, **checks)
     return value
@@ -108,7 +153,7 @@ def check_vars(
         checks: dict,
 ) -> None:
     """
-    Checks if value is in nested dict and correct by path of keys
+    Checks if there is the value in the dict and it's correct
 
     Args:
         path: List with path
@@ -202,6 +247,16 @@ def check_config(
         config = toml.load(config_name)
 
     template = toml.load(template_name)
+    console.print(
+        """\
+[blue bold]###############################
+#                             #
+# Checking TOML configuration #
+#                             #
+###############################
+If you see any prompts, that means that you have unset/incorrectly set variables, please input the correct values.\
+"""
+    )
     crawl(template, check_vars)
     with open(config_name, "w") as f:
         toml.dump(config, f)

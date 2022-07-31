@@ -1,13 +1,14 @@
+#!/usr/bin/env python3
 from rich.console import Console
-import re
 from typing import Optional, Union
+import re
 
 console = Console()
 
 
 def handle_input(
         *,
-        var_type: Optional[str] = None,
+        var_type: Union[str, bool] = False,
         regex: str = "",
         input_error: str = "",
         nmin: Optional[int] = None,  # noqa
@@ -15,11 +16,11 @@ def handle_input(
         oob_error: str = "",
         explanation: str = "",
         options: list = None,
-        default: Union[str, NotImplemented] = NotImplemented,
+        default: Optional[str] = NotImplemented,
         optional: bool = False,
         example: Optional[str] = None,
         name: str = "",
-        message: Optional[str, float] = None,
+        message: Optional[Union[str, float]] = None,
 ):
     if not message:
         message = (
@@ -30,7 +31,7 @@ def handle_input(
                 + str(name)
                 + "[#F7768E bold]="
         )
-    var_type = eval(var_type)
+    var_type: any = eval(var_type) if var_type else var_type
 
     if optional:
         console.print(message + "\n[green]This is an optional value. Do you want to skip it? (y/n)")
@@ -52,7 +53,7 @@ def handle_input(
         while True:
             console.print(message, end="")
             user_input = input("").strip()
-            if var_type:
+            if var_type is not False:
                 try:
                     user_input = var_type(user_input)
                     if (nmin is not None and user_input < nmin) or (

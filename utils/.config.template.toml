@@ -1,78 +1,220 @@
 [reddit]
+    [reddit.cliend_id]
+        optional = false
+        type = "str"
+        explanation = "The CLIENT_ID from your Reddit application"
+        example = "fFAGRNJru1FTz70BzhT3Zg"
+        regex = "^[-a-zA-Z0-9._~+/]+=*$"
+        input_error = "The client ID can only contain printable characters."
+        nmin = 12
+        nmax = 30
+        oob_error = "The ID should be over 12 and under 30 characters, double check your input."
 
-[reddit.cliend_id]
-optional = false
-type = "str"
-example = ""
-comment = ""
+    [reddit.cliend_secret]
+        optional = false
+        type = "str"
+        explanation = "The CLIENT_SECRET from your Reddit application"
+        example = "fFAGRNJru1FTz70BzhT3Zg"
+        regex = "^[-a-zA-Z0-9._~+/]+=*$"
+        input_error = "The client ID can only contain printable characters."
+        nmin = 20
+        nmax = 40
+        oob_error = "The secret should be over 20 and under 40 characters, double check your input."
 
-[reddit.cliend_secret]
-optional = false
-type = "str"
-example = ""
-comment = ""
+    [reddit.thread]
+        [reddit.thread.subreddit]
+            optional = false
+            explanation = "what subreddit to pull posts from, the name of the sub, not the URL"
+            example = "AskReddit"
+            regex = "[_0-9a-zA-Z]+$"
+            nmin = 3
+            oob_error = "A subreddit name HAS to be between atleast 3 characters"
 
-[reddit.subreddit]
-optional = false
-default = "AskReddit"
-type = "str"
-example = "AskReddit"
-comment = ""
+        [reddit.thread.submission]
+            optional = true
+            default = ""
+            regex = "^((?!://|://)[\w][^_])*$"
+            explanation = "Used if you want to use a specific post."
+            example = "urdtfx"
 
-[reddit.submission]
-optional = true
-type = "str"
-example = ""
-comment = ""
+        [reddit.thread.sorting]
+            optional = true
+            default = "hot"
+            options = ["hot", "top"]
+            type = "str"
+            example = "hot"
+            comment = "Sorting threads by hot or top posts"
 
-[reddit.sorting]
-optional = true
-default = "hot"
-options = ["hot", "top"]
-type = "str"
-example = ""
-comment = ""
-
-[reddit.min_score]
-optional = true
-default = "200"
-type = "int"
-example = "500"
-comment = ""
+        [reddit.thread.min_score]
+            optional = true
+            default = 200
+            type = "int"
+            example = 500
+            comment = "Minimal number of upvotes of a thread"
 
 [video]
+    [video.final_video_length]
+        optional = true
+        default = 40
+        type = "int"
+        example = 50
+        comment = "Final length of the video"
+        nmin = 20
+        oob_error = "Choose at least 20 seconds"
 
-[video.FINAL_VIDEO_LENGTH]
-[video.DARK_THEME]
-[video.MIN_COMMENT_LENGTH]
-[video.MAX_COMMENT_LENGTH]
-[video.OPACITY]
-[video.VIDEO_WIDTH]
-[video.VIDEO_HEIGHT]
-[video.TIME_BEFORE_FIRST]
-[video.TIME_BEFORE_TTS]
-[video.TIME_BETWEEN_PICTURES]
-[video.BACK_MUSIC_VOLUME]
-[video.DELAY_BEFORE_END]
-[video.FINAL_VIDEO_NAME]
+    [video.dark_theme]
+        optional = true
+        default = true
+        type = "bool"
+        options = [true, false]
+        example = true
+        comment = "Enables dark theme in all screenshots"
+
+    [video.min_comment_length]
+        optional = true
+        default = 0
+        type = "int"
+        example = 100
+        comment = "Minilam number of characters in a comment"
+        nmin = 0
+        oob_error = "Choose 0 to disable or >1 to enable"
+
+    [video.max_comment_length]
+        optional = true
+        default = 300
+        type = "int"
+        example = 200
+        comment = "Maximum number of characters in a comment"
+        nmin = 10
+        oob_error = "Choose number >=10 to enable"
+
+    [video.opacity]
+        optional = true
+        default = 95
+        type = "int"
+        example = 90
+        comment = "Opacity of the screenshots in final video in percents"
+        nmin = 50
+        nmax = 100
+        oob_error = "Opacity has to be atleast 50 percents and <= 100 percents"
+
+    [video.video_width]
+        optional = true
+        default = 1080
+        type = "int"
+        example = 1080
+        comment = "Width of the final video"
+        nmin = 600
+        nmax = 1920
+        oob_error = "Width has to be in the range 600 <= width <= 1920"
+
+    [video.video_height]
+        optional = true
+        default = 1920
+        type = "int"
+        example = 200
+        comment = "Height of the final video"
+        nmin = 600
+        nmax = 1920
+        oob_error = "Height has to be in the range 600 <= height <= 1920"
+
+    [video.time_before_first]
+        optional = true
+        default = 0.5
+        type = "float"
+        example = 1.0
+        comment = "Time before first picture appeares"
+        nmin = 0
+        oob_error = "Pause can't be less then 0"
+
+    [video.time_before_tts]
+        optional = true
+        default = 0.5
+        type = "float"
+        example = 1
+        comment = "Pause between screenshots and TTS"
+        nmin = 0
+        oob_error = "Pause can't be less then 0"
+
+    [video.time_between_pictures]
+        optional = true
+        default = 0.5
+        type = "float"
+        example = 1
+        comment = "Time between every screenshot"
+        nmin = 0
+        oob_error = "Pause can't be less then 0"
+
+    [video.delay_before_end]
+        optional = true
+        default = 0.5
+        type = "float"
+        example = 1
+        comment = "Pause between last screenshot and the end of the video"
+        nmin = 0
+        oob_error = "Pause can't be less then 0"
 
 [settings]
+    [settings.manual_mode]
+        optional = true
+        default = true
+        type = "bool"
+        example = true
+        options = [true, false]
+        comment = "Enables manual mode (validate every thread and comment)"
 
-[settings.MANUAL_MODE]
-[settings.ALLOW_NSFW]
-[settings.PROFANE_FILTER]
+    [settings.allow_nsfw]
+        optional = true
+        default = true
+        type = "bool"
+        example = true
+        options = [true, false]
+        comment = "Allows NSFW threads"
+
+    [settings.profane_filter]
+        optional = true
+        default = false
+        type = "bool"
+        example = true
+        options = [true, false]
+        comment = "Enables profane filter"
 
 [tts]
-
-[tts.TTS_VOICE]
+    [tts.tts_voice]
 
 [backvideo]
-
-[backvideo.YT_BACK_VIDEO]
-[backvideo.BACK_VIDEO_QUERY]
+    [backvideo.yt_back_video]
+    [backvideo.back_video_query]
 
 [backaudio]
+    [backaudio.enable_back_audio]
+        optional = true
+        default = true
+        type = "bool"
+        example = true
+        options = [true, false]
+        comment = "Enables background audio"
 
-[backaudio.ENABLE_BACK_AUDIO]
-[backaudio.YT_BACK_AUDIO]
-[backaudio.BACK_AUDIO_QUERY]
+    [backaudio.volume]
+        optional = true
+        default = 50
+        type = "int"
+        example = 50
+        comment = "Maximum number of characters in a comment"
+        nmin = 1
+        oob_error = "Volume can't be less then 1 percent"
+
+    [backaudio.yt_query]
+        optional = true
+        default = ""
+        type = "str"
+        example = "Minecraft parkour"
+        comment = "Youtube query to use as a background audio (blank for default)"
+
+    [backaudio.yt_link]
+        optional = true
+        default = ""
+        type = "str"
+        example = "https://youtu.be/s9PeJyBujQc"
+        comment = "Youtube link to use as a background audio (blank for default)"
+        regex = "^http(?:s?):\/\/(?:www\.)?youtu(?:be\.com\/watch\?v=|\.be\/)([\w\-]+)(&(amp;)?[\w\?=]*)?$"
